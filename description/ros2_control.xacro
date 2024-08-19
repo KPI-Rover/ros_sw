@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="wheel_interface" params="prefix">
+        <joint name="${prefix}_joint">
+            <command_interface name="velocity">
+                <param name="min">-10</param>
+                <param name="max">10</param>
+            </command_interface>
+            <state_interface name="position" />
+            <state_interface name="velocity" />
+        </joint>
+    </xacro:macro>
+    
+    <xacro:unless value="$(arg sim_mode)">
+        <ros2_control name="RealRobot" type="system">
+            <hardware>
+                <plugin>diffdrive_arduino/DiffDriveArduinoHardware</plugin>
+                <param name="left_wheel_name">front_left_wheel_joint</param>
+                <param name="right_wheel_name">front_right_wheel_joint</param>
+                <param name="loop_rate">30</param>
+                <param name="device">/dev/ttyUSB0</param>
+                <param name="baud_rate">115200</param>
+                <param name="timeout_ms">1000</param>
+                <param name="enc_counts_per_rev">3436</param>
+            </hardware>
+            <xacro:wheel_interface prefix="front_left_wheel" />
+            <xacro:wheel_interface prefix="front_right_wheel" />
+            <xacro:wheel_interface prefix="rear_left_wheel" />
+            <xacro:wheel_interface prefix="rear_right_wheel" />
+        </ros2_control>
+    </xacro:unless>
+
+    <xacro:if value="$(arg sim_mode)">
+        <ros2_control name="GazeboSystem" type="system">
+            <hardware>
+                <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+            </hardware>
+            <xacro:wheel_interface prefix="front_left_wheel" />
+            <xacro:wheel_interface prefix="front_right_wheel" />
+            <xacro:wheel_interface prefix="rear_left_wheel" />
+            <xacro:wheel_interface prefix="rear_right_wheel" />
+        </ros2_control>
+    </xacro:unless>
+
+    <gazebo>
+        <!-- Joint state publisher -->
+        <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+          <parameters>$(find apricotka-robot-car)/config/my_controllers.yaml</parameters>
+        </plugin>
+      </gazebo>
+
+</robot>
