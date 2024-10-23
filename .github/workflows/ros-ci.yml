@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: ubuntu:noble
     steps:
       # Checkout repository
       #- name: Checkout code
