@@ -11,21 +11,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container:
+      image: ubuntu:noble
     steps:
       # Checkout repository
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Set up ROS 2 environment and build the workspace using ROS CI Action
-      - name: ROS 2 CI Action
-        uses: ros-tooling/action-ros-ci@0.3.15
-        with:
-          # The target ROS 2 distribution
-          target-ros2-distro: jazzy
-          # Additional CMake args (optional)
-          cmake-args: -DCMAKE_BUILD_TYPE=Release
-
-      # Run tests
-      - name: Run tests
-        run: colcon test --event-handlers console_cohesion+
+      #- name: Checkout code
+      #  uses: actions/checkout@v3
+    - uses: ros-tooling/setup-ros@v0.7
+      with:
+        required-ros-distributions: jazzy
+    - uses: ros-tooling/action-ros-ci@v0.3
+      with:
+        package-name: my_package
+        target-ros2-distro: jazzy
