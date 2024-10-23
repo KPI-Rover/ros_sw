@@ -41,7 +41,7 @@
             <xacro:wheel_interface prefix="rear_left_wheel" />
             <xacro:wheel_interface prefix="rear_right_wheel" />
         </ros2_control>
-    </xacro:unless>
+    </xacro:if>
 
     <gazebo>
         <!-- Joint state publisher -->
