@@ -11,8 +11,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:noble
     steps:
       # Checkout repository
       #- name: Checkout code
@@ -22,5 +20,5 @@ jobs:
         required-ros-distributions: jazzy
     - uses: ros-tooling/action-ros-ci@v0.3
       with:
-        package-name: my_package
+        package-name: apricotka-robot-car
         target-ros2-distro: jazzy
