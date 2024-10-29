@@ -29,6 +29,7 @@ Ensure you have the following installed:
 2. **Install Dependencies**
     ```bash
     cd ~/ros_sw
+    source /opt/ros/jazzy/setup.bash
     rosdep install --from-paths src --ignore-src -r -y
     ```
 
@@ -43,3 +44,10 @@ Ensure you have the following installed:
     colcon build
     ```
 
+### Running the Project
+1. **Source the Workspace**
+    Source the setup file for your workspace:
+    ```bash
+    source ~/ros_sw/install/setup.bash
+    ```
+2. **Run the Nodes**
