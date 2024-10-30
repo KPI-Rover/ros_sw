@@ -1,3 +1,12 @@
 {
-    "ros.distro": "jazzy"
+    "ros.distro": "jazzy",
+    "python.autoComplete.extraPaths": [
+        "/home/dshl/repos/ros_sw/install/row_crop_follow/lib/python3.12/site-packages",
+        "/opt/ros/jazzy/lib/python3.12/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/dshl/repos/ros_sw/install/row_crop_follow/lib/python3.12/site-packages",
+        "/opt/ros/jazzy/lib/python3.12/site-packages"
+    ],
+    "cmake.sourceDirectory": "/home/dshl/repos/ros_sw/src/apricotka-robot-car"
 }

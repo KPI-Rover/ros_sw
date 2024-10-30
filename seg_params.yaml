@@ -6,8 +6,8 @@ seg_controller:
     rgb_topic: /camera/image_raw
     
     # model_file: /home/fastroof/dev_ws/src/SegMinNavigation/row_crop_follow/models/lr_aspp/vineyard_tot_pergolato/vineyards_segmentation_binary.tflite
-    model_file: /home/fastroof/dev_ws/src/SegMinNavigation/row_crop_follow/models/lr_aspp/trees_covivio/trees_segmentation_binary.tflite
-    inference_device: cpu # cpu or gpu
+    model_file: src/SegMinNavigation/row_crop_follow/models/lr_aspp/trees_covivio/trees_segmentation_binary.tflite
+    inference_device: gpu # cpu or gpu
     input_width_network: 224
     input_height_network: 224
     normalization: imagenet

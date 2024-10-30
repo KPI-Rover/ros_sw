@@ -1,5 +1,5 @@
 import os
-
+from launch.actions import LogInfo
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -7,8 +7,9 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, ExecuteProcess, TimerAction, RegisterEventHandler
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.event_handlers import OnProcessStart
-from launch.substitutions import Command
+from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     package_name='apricotka-robot-car'
@@ -58,4 +59,5 @@ def generate_launch_description():
     ld.add_action(delayed_controller_manager)
     ld.add_action(delayed_diff_drive_controller)
     ld.add_action(delayed_joint_broad_broadcaster)
+    ld.add_action(LogInfo(condition=IfCondition(LaunchConfiguration('use_ros2_control')), msg='Using ROS2 control.'))
     return ld
