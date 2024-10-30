@@ -29,7 +29,6 @@ Ensure you have the following installed:
 2. **Install Dependencies**
     ```bash
     cd ~/ros_sw
-    source /opt/ros/jazzy/setup.bash
     rosdep install --from-paths src --ignore-src -r -y
     ```
 
@@ -43,11 +42,11 @@ Ensure you have the following installed:
     ```bash
     colcon build
     ```
-
-### Running the Project
-1. **Source the Workspace**
-    Source the setup file for your workspace:
+3. **Start robot**
     ```bash
-    source ~/ros_sw/install/setup.bash
+    ros2 launch apricotka-robot-car launch_sim.launch.py
     ```
-2. **Run the Nodes**
+4. **Keyboard control**
+    ```bash
+     ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel -p stamped:=True -p frame_id:=base_link
+    ```
