@@ -49,6 +49,12 @@ def generate_launch_description():
         }.items()
     )
 
+    joystick_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory(package_name), 'launch', 'joystick.launch.py')
+        )
+    )
+
     load_joint_state_broadcaster = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
              'joint_state_broadcaster'],
@@ -64,11 +70,12 @@ def generate_launch_description():
     # Launch them all!
     ld = LaunchDescription()
 
+    ld.add_action(joystick_launch_cmd)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(rsp_cmd)
     ld.add_action(spawn_robot_cmd)
     ld.add_action(load_joint_state_broadcaster)
     ld.add_action(load_diff_drive_controller)
-
+    
     return ld
