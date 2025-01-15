@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>Apricotka Robot Car</description>
   <maintainer email="fastroof@todo.todo">fastroof</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -13,6 +13,8 @@
   <test_depend>ament_lint_common</test_depend>
 
   <depend>ros2_control</depend>
+  <depend>joy</depend>
+  <depend>teleop_twist_joy</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
