@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /Image1
+        - /LaserScan1
       Splitter Ratio: 0.5
     Tree Height: 122
   - Class: rviz_common/Selection
@@ -26,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: LaserScan
 Visualization Manager:
   Class: ""
   Displays:
@@ -65,9 +66,25 @@ Visualization Manager:
           Value: true
         chassis:
           Value: true
+        front_left_wheel_link:
+          Value: true
+        front_right_wheel_link:
+          Value: true
         imu_link:
           Value: true
+        laser_frame:
+          Value: true
         odom:
+          Value: true
+        rear_left_wheel_link:
+          Value: true
+        rear_right_wheel_link:
+          Value: true
+        rod_link:
+          Value: true
+        water_cap_link:
+          Value: true
+        water_tank_link:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -83,8 +100,23 @@ Visualization Manager:
               {}
           chassis:
             {}
+          front_left_wheel_link:
+            {}
+          front_right_wheel_link:
+            {}
           imu_link:
             {}
+          rear_left_wheel_link:
+            {}
+          rear_right_wheel_link:
+            {}
+          rod_link:
+            {}
+          water_tank_link:
+            laser_frame:
+              {}
+            water_cap_link:
+              {}
         odom:
           {}
       Update Interval: 0
@@ -143,12 +175,32 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        laser_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         rear_left_wheel_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
         rear_right_wheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        rod_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        water_cap_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        water_tank_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -174,6 +226,40 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /camera/image_raw
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 0
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: LaserScan
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.05000000074505806
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /scan
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
   Enabled: true
   Global Options:
@@ -221,7 +307,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.6485165953636169
+      Distance: 14.021172523498535
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -236,10 +322,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.33979833126068115
+      Pitch: 0.949798047542572
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.153573513031006
+      Yaw: 3.273560047149658
     Saved: ~
 Window Geometry:
   Displays:
