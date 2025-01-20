@@ -25,7 +25,7 @@ find_package(tf2_ros REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 install(
-  DIRECTORY config description executables launch params worlds
+  DIRECTORY config description executables launch params worlds maps
   DESTINATION share/${PROJECT_NAME}
 )
 
