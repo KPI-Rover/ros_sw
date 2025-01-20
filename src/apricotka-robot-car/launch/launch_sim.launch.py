@@ -78,6 +78,17 @@ def generate_launch_description():
         output='screen'
     )
 
+    ekf = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[
+            os.path.join(get_package_share_directory(package_name), 'config', 'ekf.yaml'),
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            ]
+    )
+
     # Launch them all!
     ld = LaunchDescription()
 
@@ -88,6 +99,7 @@ def generate_launch_description():
     ld.add_action(spawn_robot_cmd)
     ld.add_action(load_joint_state_broadcaster)
     ld.add_action(load_diff_drive_controller)
+    ld.add_action(ekf)
     ld.add_action(rviz)
     
     return ld
