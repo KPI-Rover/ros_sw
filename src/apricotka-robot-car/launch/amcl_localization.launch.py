@@ -15,7 +15,6 @@ def generate_launch_description():
         description='Flag to enable use_sim_time'
     )
 
-    # Path to the Slam Toolbox launch file
     nav2_localization_launch_path = os.path.join(
         get_package_share_directory('nav2_bringup'),
         'launch',

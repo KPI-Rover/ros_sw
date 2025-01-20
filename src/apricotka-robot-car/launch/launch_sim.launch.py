@@ -74,7 +74,7 @@ def generate_launch_description():
         package='rviz2',
         executable='rviz2',
         name='rviz2',
-        arguments=['-d', get_package_share_directory(package_name) + '/config/view_bot.rviz'],
+        arguments=['-d', get_package_share_directory(package_name) + '/config/navigation.rviz'],
         output='screen'
     )
 
@@ -98,6 +98,21 @@ def generate_launch_description():
                            }.items()
     )
 
+    amcl = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory(package_name),'launch','amcl_localization.launch.py')]
+        ),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
+
+    nav = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory(package_name),'launch','navigation.launch.py')]
+        ),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
+
+
     # Launch them all!
     ld = LaunchDescription()
 
@@ -109,7 +124,9 @@ def generate_launch_description():
     ld.add_action(load_joint_state_broadcaster)
     ld.add_action(load_diff_drive_controller)
     ld.add_action(ekf)
-    #ld.add_action(slam_toolbox_map)
+    ld.add_action(slam_toolbox_map)
+    #ld.add_action(amcl)
+    ld.add_action(nav)
     ld.add_action(rviz)
     
     return ld
