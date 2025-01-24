@@ -46,8 +46,8 @@
     <gazebo>
         <!-- Joint state publisher -->
         <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-          <parameters>$(find apricotka-robot-car)/config/my_controllers.yaml</parameters>
+          <parameters>$(find ros_sw)/config/my_controllers.yaml</parameters>
         </plugin>
-      </gazebo>
+    </gazebo>
 
 </robot>

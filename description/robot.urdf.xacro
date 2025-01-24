@@ -6,5 +6,8 @@
     <xacro:include filename="robot_core.xacro" />
     <xacro:include filename="camera.xacro" />
     <xacro:include filename="ros2_control.xacro" />
+    <xacro:include filename="imu.xacro" />
+    <xacro:include filename="navsat.xacro" />
+    <xacro:include filename="lidar.xacro" />
     
 </robot>

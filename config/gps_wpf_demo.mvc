@@ -1,0 +1,61 @@
+capture_directory: "~"
+fixed_frame: map
+target_frame: map
+fix_orientation: false
+rotate_90: false
+enable_antialiasing: true
+show_displays: true
+show_status_bar: true
+show_capture_tools: true
+view_scale: 0.564473748
+offset_x: -55.0469894
+offset_y: -4.65194941
+use_latest_transforms: true
+background: "#a0a0a4"
+image_transport: raw
+displays:
+  - type: mapviz_plugins/tile_map
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      custom_sources:
+        - base_url: https://api.maptiler.com/tiles/satellite-v2/{level}/{x}/{y}.jpg?key=prOIJC29PpyOVqzLxuuJ
+          max_zoom: 23
+          name: mt
+          type: wmts
+        - base_url: http://tile.openstreetmap.org/{level}/{x}/{y}.png
+          max_zoom: 21
+          name: osm
+          type: wmts
+      bing_api_key: ""
+      source: mt
+  - type: mapviz_plugins/point_click_publisher
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      topic: clicked_point
+      output_frame: wgs84
+  - type: mapviz_plugins/tf_frame
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      frame: base_link
+      color: "#00ff00"
+      draw_style: arrows
+      position_tolerance: 0
+      buffer_size: 1
+      static_arrow_sizes: true
+      arrow_size: 53
+  - type: mapviz_plugins/navsat
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      topic: /gps/fix
+      color: "#55aaff"
+      draw_style: points
+      position_tolerance: 0
+      buffer_size: 1

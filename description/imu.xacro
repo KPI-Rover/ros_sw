@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+    <joint name="imu_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="imu_link"/>
+        <origin xyz="0.0 0 0.068" rpy="0 0 0"/>
+    </joint>
+
+    <link name="imu_link"/>
+
+    <gazebo reference="imu_link">
+        <sensor type="imu" name="imu">
+            <always_on>1</always_on>
+            <visualize>false</visualize>
+            <topic>imu/data</topic>
+        </sensor>
+    </gazebo>
+</robot>

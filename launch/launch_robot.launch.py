@@ -11,7 +11,7 @@ from launch.substitutions import Command
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    package_name='apricotka-robot-car'
+    package_name='ros_sw'
 
     rsp_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
