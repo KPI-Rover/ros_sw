@@ -1,17 +1,29 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>apricotka-robot-car</name>
+  <name>kpi_rover</name>
   <version>0.0.0</version>
-  <description>Apricotka Robot Car</description>
-  <maintainer email="fastroof@todo.todo">fastroof</maintainer>
+
+  <description>KPI Rover project</description>
+
+  <url type="repository">https://github.com/KPI-Rover/ros_ws</url>
+  <url type="website">https://kpi-rover.github.io/</url>
+
+  <maintainer email="aksonov.sergei@gmail.com">Aksonov Sergii</maintainer>
+  <maintainer email="another_maintainer@example.com">Another Maintainer</maintainer>
+  <maintainer email="another_maintainer@example.com">Another Maintainer</maintainer>
+  
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-
+  
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
+  <depend>rclcpp</depend>
+  <depend>pluginlib</depend>
+  <depend>hardware_interface</depend>
+  <depend>controller_manager</depend>
   <depend>ros2_control</depend>
   <depend>joy</depend>
   <depend>teleop_twist_joy</depend>
@@ -28,6 +40,11 @@
   <depend>navigation2</depend>
   <depend>nav2_bringup</depend>
   <depend>twist_stamper</depend>
+    
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <exec_depend>libfastcdr-dev</exec_depend>
   
   <export>
     <build_type>ament_cmake</build_type>
