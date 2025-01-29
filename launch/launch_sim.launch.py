@@ -26,7 +26,7 @@ from launch_ros.actions import Node
 # Define the common simulation clock parameter
 use_sim_time = LaunchConfiguration('use_sim_time', default='true')
 
-package_name = 'apricotka-robot-car'
+package_name = 'kpi_rover'
 ros_gz_sim = get_package_share_directory('ros_gz_sim')
 
 ld = LaunchDescription()
