@@ -9,7 +9,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
-    package_name='apricotka-robot-car'
+    package_name='kpi_rover'
     ros_gz_sim = get_package_share_directory('ros_gz_sim')
 
     x_pose = LaunchConfiguration('x_pose', default='0.0')
