@@ -18,7 +18,7 @@ def generate_launch_description():
     world = os.path.join(
         get_package_share_directory(package_name),
         'worlds',
-        'empty.world'
+        'forest.world'
     )
 
     gzserver_cmd = IncludeLaunchDescription(
