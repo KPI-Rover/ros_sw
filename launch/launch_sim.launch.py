@@ -4,9 +4,10 @@ from ament_index_python.packages import get_package_share_directory
 
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, ExecuteProcess, AppendEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
 def generate_launch_description():
     package_name='apricotka-robot-car'
@@ -49,12 +50,6 @@ def generate_launch_description():
         }.items()
     )
 
-    joystick_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory(package_name), 'launch', 'joystick.launch.py')
-        )
-    )
-
     load_joint_state_broadcaster = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
              'joint_state_broadcaster'],
@@ -67,15 +62,23 @@ def generate_launch_description():
         output='screen'
     )
 
+    rviz = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', get_package_share_directory(package_name) + '/config/view_bot.rviz'],
+        output='screen'
+    )
+
     # Launch them all!
     ld = LaunchDescription()
 
-    ld.add_action(joystick_launch_cmd)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(rsp_cmd)
     ld.add_action(spawn_robot_cmd)
     ld.add_action(load_joint_state_broadcaster)
     ld.add_action(load_diff_drive_controller)
+    ld.add_action(rviz)
     
     return ld
