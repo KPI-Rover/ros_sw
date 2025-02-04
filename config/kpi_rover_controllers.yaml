@@ -1,6 +1,7 @@
 controller_manager:
   ros__parameters:
-    update_rate: 100 
+  # TODO Return back normal rate. It was decrised for debugging
+    update_rate: 1 
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
