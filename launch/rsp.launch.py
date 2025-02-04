@@ -3,23 +3,21 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.substitutions import LaunchConfiguration, Command
+from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
+
     # Check if we're told to use sim time
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_ros2_control = LaunchConfiguration('use_ros2_control')
 
     # Process the URDF file
-    pkg_path = os.path.join(get_package_share_directory('apricotka-robot-car'))
-    xacro_file = os.path.join(pkg_path, 'description', 'robot.urdf.xacro')
-    robot_description_config = Command([
-        'xacro ', xacro_file,
-        ' use_ros2_control:=', use_ros2_control,
-        ' sim_mode:=', use_sim_time
-    ])
+    # pkg_path = get_package_share_directory('kpi_rover')
+    xacro_file = PathJoinSubstitution([FindPackageShare('kpi_rover'), 'description', 'robot.urdf.xacro'])
+    robot_description_config = Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time])
 
     # Launch!
     return LaunchDescription([
