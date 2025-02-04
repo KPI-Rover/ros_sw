@@ -1,6 +1,7 @@
 controller_manager:
   ros__parameters:
-    update_rate: 30 
+  # TODO Return back normal rate. It was decrised for debugging
+    update_rate: 1 
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -15,8 +16,9 @@ diff_drive_base_controller:
 
     wheel_separation: 0.1
     wheel_radius: 0.033
-
-    publish_rate: 50.0
+    # TODO Return back normal rate. It was decrised for debugging
+    publish_rate: 1.0
     # odom_frame_id: odom
+    enable_odom_tf: true
     base_frame_id: base_link
     use_stamped_vel: false
