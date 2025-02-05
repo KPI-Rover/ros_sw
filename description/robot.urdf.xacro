@@ -10,4 +10,5 @@
     <xacro:include filename="water_tank.xacro" />
 <!-- <xacro:include filename="flexible_rod.xacro" /> -->
     <xacro:include filename="ros2_control.xacro" />
+    <xacro:include filename="imu.xacro" />
 </robot>
