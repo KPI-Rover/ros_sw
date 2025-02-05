@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">     
+    <xacro:property name="tank_x_size" value="0.6" />
+    <xacro:property name="tank_y_size" value="0.6" />
+    <xacro:property name="tank_z_size" value="0.32" />
+    <xacro:property name="tank_mass" value="100" />
+    
+    <xacro:property name="cap_radius" value="0.1" />
+    <xacro:property name="cap_height" value="0.05" />
+
+    <link name="water_tank_link">
+        <visual>
+        <geometry>
+            <box size="${tank_x_size} ${tank_y_size} ${tank_z_size}"/>
+        </geometry>
+        <material name="grey"/>
+        </visual>
+        <collision>
+        <geometry>
+            <box size="${tank_x_size} ${tank_y_size} ${tank_z_size}"/>
+        </geometry>
+        </collision>
+        <xacro:inertial_box mass="${tank_mass}" x="${tank_x_size}" y="${tank_y_size}" z="${tank_z_size}">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="water_tank_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="water_tank_link"/>
+        <origin xyz="0 0 ${base_z_size/2 + tank_z_size/2}" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="water_tank_link">
+        <material name="gazebo_grey"/>
+    </gazebo>
+
+    <link name="water_cap_link">
+        <visual>
+        <geometry>
+            <cylinder radius="${cap_radius}" length="${cap_height}"/>
+        </geometry>
+        <material name="black"/>
+        </visual>
+        <collision>
+        <geometry>
+            <cylinder radius="${cap_radius}" length="${cap_height}"/>
+        </geometry>
+        </collision>
+    </link>
+
+    <joint name="water_cap_joint" type="fixed">
+        <parent link="water_tank_link"/>
+        <child link="water_cap_link"/>
+        <origin xyz="${cap_radius + 0.05 - tank_y_size/2} 0 ${tank_z_size/2 + cap_height/2}" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="water_cap_link">
+        <material name="gazebo_white"/>
+    </gazebo>
+</robot>
