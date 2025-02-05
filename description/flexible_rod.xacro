@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:property name="rod_x_size" value="2.0" />
+    <xacro:property name="rod_y_size" value="0.03" />
+    <xacro:property name="rod_z_size" value="0.03" />
+
+    <xacro:property name="finger_x_size" value="0.5" />
+    <xacro:property name="finger_y_size" value="0.03" />
+    <xacro:property name="finger_z_size" value="0.03" />
+
+    <!-- material density -->
+    <xacro:property name="rod_density" value="1500.0" />
+
+    <!-- rod and fingers mass -->
+    <xacro:property name="rod_mass" value="${rod_density*rod_x_size*rod_y_size*rod_z_size}" />
+    <xacro:property name="finger_mass" value="${rod_density*finger_x_size*finger_y_size*finger_z_size}" />
+
+    <!-- rod -->
+    <link name="rod_link">
+        <visual>
+            <geometry>
+                <box size="${rod_x_size} ${rod_y_size} ${rod_z_size}"/>
+            </geometry>
+            <material name="grey"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="${rod_x_size} ${rod_y_size} ${rod_z_size}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${rod_mass}" x="${rod_x_size}" y="${rod_y_size}" z="${rod_z_size}">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="rod_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="rod_link"/>
+        <origin xyz="0 0 ${base_z_size/2 + tank_z_size + rod_z_size/2}" rpy="0 0 1.5708"/>
+    </joint>
+
+    <gazebo reference="rod_link">
+        <material name="gazebo_grey"/>
+    </gazebo>
+
+    <!-- fingers -->
+    <!-- <xacro:macro name="finger" params="prefix reflect">
+        <link name="${prefix}_finger_link">
+            <visual>
+                <origin xyz="${reflect*finger_x_size/2} 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <box size="${finger_x_size} ${finger_y_size} ${finger_z_size}"/>
+                </geometry>
+                <material name="blue"/>
+            </visual>
+
+            <collision>
+                <geometry>
+                    <box size="${finger_x_size} ${finger_y_size} ${finger_z_size}"/>
+                </geometry>
+            </collision>
+            <xacro:inertial_box mass="${finger_mass}" x="${finger_x_size}" y="${finger_y_size}" z="${finger_z_size}">
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+            </xacro:inertial_box>
+        </link>
+
+        <joint name="${prefix}_finger_joint" type="revolute">
+            <parent link="rod_link"/>
+            <child link="${prefix}_finger_link"/>
+            <origin xyz="${reflect*(rod_x_size/2)} 0 0" rpy="0 0 0"/>
+            <axis xyz="0 0 ${reflect}"/>
+            <limit lower="-1.57" upper="1.57" effort="10" velocity="1"/>
+            <dynamics damping="1.0" friction="0.0"/>
+        </joint>
+
+        <gazebo reference="${prefix}_finger_link">
+            <material name="gazebo_blue"/>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:finger prefix="left" reflect="-1" />
+    <xacro:finger prefix="right" reflect="1" /> -->
+
+</robot>
