@@ -26,9 +26,9 @@
     </link>
     
     <joint name="base_footprint_joint" type="fixed">
-        <parent link="base_link"/>
-        <child link="base_footprint"/>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="base_footprint"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
     </joint>
 
     <!-- chassis -->
@@ -60,7 +60,7 @@
     </gazebo>
 
     <!-- wheels -->
-    <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
+    <xacro:macro name="wheel" params="prefix x_reflect y_reflect mu1 mu2">
         <link name="${prefix}_link">
             <visual>
                 <geometry>
@@ -88,14 +88,14 @@
 
         <gazebo reference="${prefix}_link">
             <material name="gazebo_blue"/>
-            <!-- <mu1 value="5"/>
-            <mu2 value="5"/> -->
+            <mu1 value="${mu1}"/>
+ <!--           <mu2 value="${mu2}"/> --> 
         </gazebo>
     </xacro:macro>
 
-    <xacro:wheel prefix="front_left_wheel" x_reflect="1" y_reflect="1" />
-    <xacro:wheel prefix="front_right_wheel" x_reflect="1" y_reflect="-1" />
-    <xacro:wheel prefix="rear_left_wheel" x_reflect="-1" y_reflect="1" />
-    <xacro:wheel prefix="rear_right_wheel" x_reflect="-1" y_reflect="-1" />
+    <xacro:wheel prefix="front_left_wheel" x_reflect="1" y_reflect="1" mu1="0.0" mu2="0.0"/>
+    <xacro:wheel prefix="front_right_wheel" x_reflect="1" y_reflect="-1" mu1="0.0" mu2="0.0"/>
+    <xacro:wheel prefix="rear_left_wheel" x_reflect="-1" y_reflect="1" mu1="5.0" mu2="0.2"/>
+    <xacro:wheel prefix="rear_right_wheel" x_reflect="-1" y_reflect="-1" mu1="5.0" mu2="0.2"/>
 
 </robot>
