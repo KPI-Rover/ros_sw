@@ -77,6 +77,15 @@ def generate_launch_description():
             ]
     )
 
+    slam_toolbox_map = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')
+        ),
+        launch_arguments = {'slam_params_file': os.path.join(get_package_share_directory(package_name), 'config', 'slam_toolbox_mapping.yaml'),
+                            'use_sim_time': LaunchConfiguration('use_sim_time')
+                           }.items()
+    )
+
     # Launch them all!
     ld = LaunchDescription()
 
@@ -86,6 +95,7 @@ def generate_launch_description():
     ld.add_action(load_joint_state_broadcaster)
     ld.add_action(load_diff_drive_controller)
     ld.add_action(ekf)
+    ld.add_action(slam_toolbox_map)
     ld.add_action(rviz)
     
     return ld
