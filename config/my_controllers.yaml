@@ -19,3 +19,5 @@ diff_drive_controller:
     publish_rate: 50.0
     # odom_frame_id: odom
     base_frame_id: base_footprint
+
+    enable_odom_tf: false
