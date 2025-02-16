@@ -27,12 +27,6 @@ def generate_launch_description():
         ),
         launch_arguments={'gz_args': ['-r -s -v4 ', world], 'on_exit_shutdown': 'true'}.items()
     )
-    gzclient_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(ros_gz_sim, 'launch', 'gz_sim.launch.py')
-        ),
-        launch_arguments={'gz_args': '-g -v4 '}.items()
-    )
     rsp_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory(package_name),'launch','rsp.launch.py')]
@@ -47,12 +41,6 @@ def generate_launch_description():
             'x_pose': x_pose,
             'y_pose': y_pose
         }.items()
-    )
-
-    joystick_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory(package_name), 'launch', 'joystick.launch.py')
-        )
     )
 
     load_joint_state_broadcaster = ExecuteProcess(
@@ -70,9 +58,7 @@ def generate_launch_description():
     # Launch them all!
     ld = LaunchDescription()
 
-    ld.add_action(joystick_launch_cmd)
     ld.add_action(gzserver_cmd)
-    ld.add_action(gzclient_cmd)
     ld.add_action(rsp_cmd)
     ld.add_action(spawn_robot_cmd)
     ld.add_action(load_joint_state_broadcaster)
