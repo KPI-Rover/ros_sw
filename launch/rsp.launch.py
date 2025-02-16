@@ -14,8 +14,12 @@ def generate_launch_description():
 
     # Process the URDF file
     pkg_path = os.path.join(get_package_share_directory('apricotka-robot-car'))
-    xacro_file = os.path.join(pkg_path,'description','robot.urdf.xacro')
-    robot_description_config = Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time])
+    xacro_file = os.path.join(pkg_path, 'description', 'robot.urdf.xacro')
+    robot_description_config = Command([
+        'xacro ', xacro_file,
+        ' use_ros2_control:=', use_ros2_control,
+        ' sim_mode:=', use_sim_time
+    ])
 
     # Launch!
     return LaunchDescription([
@@ -32,5 +36,9 @@ def generate_launch_description():
             executable='robot_state_publisher',
             name='robot_state_publisher',
             output='screen',
-            parameters=[{'robot_description': robot_description_config, 'use_sim_time': use_sim_time}])
+            parameters=[{
+                'robot_description': robot_description_config,
+                'use_sim_time': use_sim_time
+            }]
+        )
     ])
