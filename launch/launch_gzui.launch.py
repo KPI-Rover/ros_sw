@@ -26,10 +26,19 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': use_sim_time}.items()
     )
 
+    rviz = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', get_package_share_directory(package_name) + '/config/view_bot.rviz'],
+        output='screen'
+    )
+
     ld = LaunchDescription()
 
     ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'))
     ld.add_action(gzclient_cmd)
     ld.add_action(joystick_launch_cmd)
+    ld.add_action(rviz)
 
     return ld

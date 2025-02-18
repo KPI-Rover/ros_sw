@@ -58,13 +58,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    rviz = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d', get_package_share_directory(package_name) + '/config/view_bot.rviz'],
-        output='screen'
-    )
+
 
     ekf = Node(
         package='robot_localization',
@@ -93,7 +87,6 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': 'true'}.items()
     )
 
-
     # Launch them all!
     ld = LaunchDescription()
 
@@ -105,6 +98,6 @@ def generate_launch_description():
     ld.add_action(ekf)
     ld.add_action(slam_toolbox_map)
     ld.add_action(nav)
-    ld.add_action(rviz)
+    
     
     return ld
