@@ -23,7 +23,12 @@
   <depend>robot_state_publisher</depend>
   <depend>joint_state_broadcaster</depend>
   <depend>diff_drive_controller</depend>
-    
+  <depend>slam_toolbox</depend>
+  <depend>robot_localization</depend>
+  <depend>navigation2</depend>
+  <depend>nav2_bringup</depend>
+  <depend>twist_stamper</depend>
+  
   <export>
     <build_type>ament_cmake</build_type>
   </export>
