@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>ros_sw</description>
   <maintainer email="fastroof@todo.todo">fastroof</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -18,7 +18,17 @@
   <depend>mapviz_plugins</depend>
   <depend>tile_map</depend>
   <depend>ros2_control</depend>
-
+  <depend>joy</depend>
+  <depend>teleop_twist_joy</depend>
+  <depend>xacro</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>ros_gz_bridge</depend>
+  <depend>ros_gz_image</depend>
+  <depend>gz_ros2_control</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_broadcaster</depend>
+  <depend>diff_drive_controller</depend>
+    
   <export>
     <build_type>ament_cmake</build_type>
   </export>

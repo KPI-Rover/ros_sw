@@ -30,12 +30,6 @@ def generate_launch_description():
         ),
         launch_arguments={'gz_args': ['-r -s -v4 ', world], 'on_exit_shutdown': 'true'}.items()
     )
-    gzclient_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(ros_gz_sim, 'launch', 'gz_sim.launch.py')
-        ),
-        launch_arguments={'gz_args': '-g -v4 '}.items()
-    )
     rsp_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             package,'launch','rsp.launch.py')]
@@ -119,7 +113,6 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(gzserver_cmd)
-    ld.add_action(gzclient_cmd)
     ld.add_action(rsp_cmd)
     ld.add_action(spawn_robot_cmd)
     ld.add_action(load_joint_state_broadcaster)
