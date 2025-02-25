@@ -1,0 +1,9 @@
+<library path="kpi_rover_diff_drive_hw">
+  <class name="kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW" 
+    type="kpi_rover_diff_drive_hw::KPIRoverDiffDriveHW"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware interface for the KPI Rover Diff Drive Controller.
+    </description>
+  </class>
+</library>
