@@ -74,7 +74,6 @@ def generate_launch_description():
         arguments=['diff_drive_base_controller'],
     )
 
-
     # Declare launch arguments
     declared_arguments = [
         DeclareLaunchArgument(

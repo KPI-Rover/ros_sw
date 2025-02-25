@@ -13,9 +13,9 @@
     </xacro:macro>
     
     <xacro:unless value="$(arg sim_mode)">
-        <ros2_control name="KPIRover" type="system">
+        <ros2_control name="KPIRoverDiffDriveHW" type="system">
             <hardware>
-                <plugin>kpi_rover_hw/KPIRoverHW</plugin>
+                <plugin>kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW</plugin>
             </hardware>
             <!-- <xacro:wheel_interface prefix="front_left_wheel" />
             <xacro:wheel_interface prefix="front_right_wheel" /> -->
@@ -39,7 +39,7 @@
     <gazebo>
         <!-- Joint state publisher -->
         <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-          <parameters>$(find kpi_rover)/config/my_controllers.yaml</parameters>
+          <parameters>$(find kpi_rover)/config/kpi_rover_controllers.yaml</parameters>
         </plugin>
     </gazebo>
 
