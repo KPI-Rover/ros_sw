@@ -20,7 +20,7 @@ def generate_launch_description():
             executable='teleop_node',
             name='teleop_node',
             parameters=[joy_params, {'publish_stamped_twist': True, 'frame': 'base_link'}],
-            remappings=[('/cmd_vel', '/diff_drive_base_controller/cmd_vel')],
+            remappings=[('/cmd_vel', '/diff_drive_controller/cmd_vel')],
             output='screen'
         )
 
