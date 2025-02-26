@@ -1,102 +1,95 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
 from ament_index_python.packages import get_package_share_directory
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # Declare launch arguments
-    use_sim_time = LaunchConfiguration('use_sim_time')
-    use_ros2_control = LaunchConfiguration('use_ros2_control')
+    use_sim_time = LaunchConfiguration('use_sim_time', default='false')
+    sim_mode = LaunchConfiguration('sim_mode', default='false')
 
-    pkg_path = get_package_share_directory('kpi_rover')
+    # Package paths
+    package_name = 'kpi_rover'
+    pkg_share = get_package_share_directory(package_name)
+    urdf_file = os.path.join(pkg_share, 'description', 'robot.urdf.xacro')
 
-    # Include the robot state publisher launch file
-    rsp_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('kpi_rover'),
-                'launch',
-                'rsp.launch.py'
-            ])
-        ]),
-        launch_arguments={'use_sim_time': use_sim_time, 'use_ros2_control': use_ros2_control}.items()
+    # Generate robot description (Xacro)
+    robot_description = Command([
+        'xacro ', urdf_file,
+        ' use_sim_time:=', use_sim_time,
+        ' sim_mode:=', sim_mode
+    ])
+
+    # Controller configuration
+    controllers_config = PathJoinSubstitution([
+        pkg_share,
+        'config',
+        'kpi_rover_controllers.yaml'
+    ])
+
+    # RViz configuration file
+    rviz_config_file = os.path.join(pkg_share, 'description', 'robot.rviz')
+
+    # Launch description
+    ld = LaunchDescription()
+
+    # Start robot state publisher
+    ld.add_action(Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        parameters=[{'robot_description': robot_description}],
+        output='screen'
+    ))
+
+    # Start controller manager
+    controller_manager = Node(
+        package='controller_manager',
+        executable='ros2_control_node',
+        parameters=[{'robot_description': robot_description}, controllers_config],
+        output='screen'
     )
+    ld.add_action(controller_manager)
 
-    # Node to launch RViz
-    node_rviz = Node(
+    # Delay controller spawner to ensure controller_manager is ready
+    controller_spawner = TimerAction(
+        period=3.0,  # Delay to give time for controller_manager to start
+        actions=[
+            Node(
+                package='controller_manager',
+                executable='spawner',
+                arguments=['joint_state_broadcaster'],
+                output='screen'
+            ),
+            Node(
+                package='controller_manager',
+                executable='spawner',
+                arguments=['diff_drive_controller'],
+                output='screen'
+            )
+        ]
+    )
+    ld.add_action(controller_spawner)
+
+    # Include joystick launch file
+    joystick_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory(package_name), 'launch', 'joystick.launch.py')
+        ),
+        launch_arguments={'use_sim_time': use_sim_time}.items()
+    )
+    ld.add_action(joystick_launch_cmd)
+
+    # Start RViz2
+    ld.add_action(Node(
         package='rviz2',
         executable='rviz2',
         name='rviz2',
         output='screen',
-        arguments=['-d', os.path.join(pkg_path, 'description', 'robot.rviz')],
+        arguments=['-d', rviz_config_file],
         parameters=[{'use_sim_time': use_sim_time}]
-    )
+    ))
 
-    # Include the joystick launch file
-    joystick_launch_file = PathJoinSubstitution([
-        FindPackageShare('kpi_rover'),
-        'launch',
-        'joystick.launch.py'
-    ])
-    node_joystick = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(joystick_launch_file),
-        launch_arguments={'use_sim_time': use_sim_time}.items()
-    )
-
-    robot_controllers = PathJoinSubstitution(
-        [
-            FindPackageShare('kpi_rover'),
-            'config',
-            'kpi_rover_controllers.yaml',
-        ]
-    )
-
-    control_node = Node(
-        package='controller_manager',
-        executable='ros2_control_node',
-        parameters=[robot_controllers],
-        output='both',
-    )
-
-    joint_state_broadcaster_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['joint_state_broadcaster'],
-    )
-
-    diff_drive_controller_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['diff_drive_base_controller'],
-    )
-
-    # Declare launch arguments
-    declared_arguments = [
-        DeclareLaunchArgument(
-            'use_sim_time',
-            default_value='false',
-            description='Use simulation (Gazebo) clock if true'
-        ),
-        DeclareLaunchArgument(
-            'use_ros2_control',
-            default_value='true',
-            description='Use ros2_control if true'
-        )
-    ]
-
-    # Define the nodes to be launched
-    nodes = [
-        rsp_cmd,
-        node_rviz,
-        node_joystick,
-        control_node,
-        joint_state_broadcaster_spawner,
-        diff_drive_controller_spawner
-    ]
-
-    # Return the LaunchDescription with declared arguments and nodes
-    return LaunchDescription(declared_arguments + nodes)
+    return ld
