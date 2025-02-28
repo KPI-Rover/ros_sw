@@ -52,6 +52,7 @@ namespace kpi_rover_diff_drive_hw
         for (int i = 0; i < 4; ++i)
         {
             RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "hw_commands_[%d]: %f", i, hw_commands_[i]);
+            
         }
         return hardware_interface::return_type::OK;
     }
@@ -81,6 +82,7 @@ namespace kpi_rover_diff_drive_hw
         command_interfaces.push_back(hardware_interface::CommandInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]));
         return command_interfaces;
     }
+
 }  // namespace kpi_rover_diff_drive_hw
 
 #include "pluginlib/class_list_macros.hpp"
