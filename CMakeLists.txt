@@ -23,6 +23,10 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
+include_directories(
+  include
+)
+
 # Example executable
 add_executable(example_diff_drive executables/example_diff_drive.cpp)
 ament_target_dependencies(example_diff_drive
@@ -52,6 +56,10 @@ target_link_libraries(kpi_rover_diff_drive_hw
 
 pluginlib_export_plugin_description_file(hardware_interface plugin_description.xml)
 
+# Build the test application
+add_executable(test_ecu_bridge test/test_ecu_bridge.cpp src/ecu_bridge/tcp_transport.cpp src/ecu_bridge/ecu_bridge.cpp)
+ament_target_dependencies(test_ecu_bridge rclcpp pluginlib)
+
 # Install headers
 install(
   DIRECTORY include/
@@ -70,6 +78,12 @@ install(
 # Install example executable
 install(
   TARGETS example_diff_drive
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install test application
+install(TARGETS
+  test_ecu_bridge
   DESTINATION lib/${PROJECT_NAME}
 )
 
