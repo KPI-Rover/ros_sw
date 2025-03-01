@@ -8,9 +8,11 @@
 namespace kpi_rover
 {
 
-    // ECUBridge implementation
+    // Constructor implementation moved from header
     ECUBridge::ECUBridge(std::unique_ptr<Transport> transport)
-        : transport_(std::move(transport)), stop_(false)
+        : transport_(std::move(transport))
+        , stop_(false)
+        , is_connected_(false)
     {
         worker_thread_ = std::thread(&ECUBridge::processQueue, this);
     }
@@ -63,8 +65,37 @@ namespace kpi_rover
         return false;
     }
 
+    bool ECUBridge::tryConnect()
+    {
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Attempting to connect...");
+        if (!transport_->connect()) {
+            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Connection attempt failed");
+            return false;
+        }
+        is_connected_ = true;
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Successfully connected");
+        return true;
+    }
+
+    void ECUBridge::maintainConnection()
+    {
+        while (!is_connected_ && !stop_) {
+            if (tryConnect()) {
+                break;
+            }
+            RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), 
+                "Connection failed, retrying in %d ms...", TIMEOUT_MS);
+            std::this_thread::sleep_for(std::chrono::milliseconds(TIMEOUT_MS));
+        }
+    }
+
     void ECUBridge::processQueue()
     {
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Starting queue processor");
+        
+        // First establish connection
+        maintainConnection();
+
         while (true)
         {
             std::pair<std::vector<uint8_t>, std::promise<std::vector<uint8_t>>> item;
@@ -77,11 +108,26 @@ namespace kpi_rover
                 item = std::move(request_queue_.front());
                 request_queue_.pop();
             }
+
+            // Check/restore connection before processing
+            if (!is_connected_) {
+                RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), "Connection lost, attempting to reconnect...");
+                maintainConnection();
+                if (!is_connected_) {
+                    RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to reconnect");
+                    item.second.set_value({}); // Return empty response on connection failure
+                    continue;
+                }
+                RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Successfully reconnected");
+            }
+
             const auto &req = item.first;
             uint8_t cmd_id = req.empty() ? 0 : req[0];
             size_t expected_len = getExpectedResponseLength(cmd_id);
             if (!transport_->send(req))
             {
+                RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to send command 0x%02X", cmd_id);
+                is_connected_ = false; // Mark as disconnected
                 item.second.set_value({});
                 continue;
             }
@@ -89,6 +135,8 @@ namespace kpi_rover
             // Use a fixed timeout for receiving response (e.g., 1000ms)
             if (!transport_->receive(resp, expected_len, 1000))
             {
+                RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to receive response for command 0x%02X", cmd_id);
+                is_connected_ = false; // Mark as disconnected
                 item.second.set_value({});
                 continue;
             }

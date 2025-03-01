@@ -9,12 +9,12 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_init()");
         
-        // Create and initialize ECUBridge
-        auto transport = std::make_unique<kpi_rover::TCPTransport>();
-        if(!transport->connect("10.30.30.30", 6000)) {  // TODO: Make configurable
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to connect transport");
-            return hardware_interface::CallbackReturn::ERROR;
-        }
+        // Create transport with direct parameters
+        auto transport = std::make_unique<kpi_rover::TCPTransport>(
+            "10.30.30.30",  // TODO: Get from ROS params
+            6000,           // TODO: Get from ROS params
+            kpi_rover::DEFAULT_RECONNECT_INTERVAL_MS // Reconnection interval
+        );
         ecu_bridge_ = std::make_unique<kpi_rover::ECUBridge>(std::move(transport));
         
         return hardware_interface::CallbackReturn::SUCCESS;
@@ -95,10 +95,10 @@ namespace kpi_rover_diff_drive_hw
         std::vector<hardware_interface::StateInterface> state_interfaces;
         state_interfaces.push_back(hardware_interface::StateInterface("front_left_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[0]));
         state_interfaces.push_back(hardware_interface::StateInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[0]));
-        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[1]));
-        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]));
-        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[2]));
-        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]));
+        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[1]));
+        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]));
+        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[2]));
+        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]));
         state_interfaces.push_back(hardware_interface::StateInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[3]));
         state_interfaces.push_back(hardware_interface::StateInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[3]));
         return state_interfaces;
@@ -109,8 +109,8 @@ namespace kpi_rover_diff_drive_hw
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "export_command_interfaces()");
         std::vector<hardware_interface::CommandInterface> command_interfaces;
         command_interfaces.push_back(hardware_interface::CommandInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[0]));
-        command_interfaces.push_back(hardware_interface::CommandInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]));
         command_interfaces.push_back(hardware_interface::CommandInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]));
         command_interfaces.push_back(hardware_interface::CommandInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]));
         return command_interfaces;
     }

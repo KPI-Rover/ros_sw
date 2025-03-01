@@ -9,8 +9,10 @@
 #include <condition_variable>
 #include <string>
 #include <functional>
+#include <atomic>
 #include "kpi_rover/ecu_bridge/transport.hpp"
 #include "kpi_rover/ecu_bridge/cache.hpp"  // included cache class
+#include "rclcpp/logging.hpp" // Add ROS logging
 
 namespace kpi_rover
 {
@@ -40,8 +42,8 @@ namespace kpi_rover
          * @brief Constructor.
          * @param transport Pointer to a Transport implementation.
          */
-        ECUBridge(std::unique_ptr<Transport> transport);
-
+        explicit ECUBridge(std::unique_ptr<Transport> transport);
+        
         /**
          * @brief Destructor.
          */
@@ -130,6 +132,15 @@ namespace kpi_rover
         uint8_t asyncGetAPIVersionSync(uint8_t driver_version);
         int32_t asyncGetEncoderSync(uint8_t motor_id);
         std::vector<int32_t> asyncGetAllEncodersSync();
+
+        // New connection management members
+        std::atomic<bool> is_connected_;
+
+        // New private methods
+        bool tryConnect();
+        void maintainConnection();
+
+        static constexpr const char* LOGGER_NAME = "ECUBridge";
     };
 
 } // namespace kpi_rover
