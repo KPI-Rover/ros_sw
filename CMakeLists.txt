@@ -45,6 +45,11 @@ target_include_directories(ecu_bridge PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
+# Add rclcpp dependency to ecu_bridge
+ament_target_dependencies(ecu_bridge
+  rclcpp
+)
+
 # Diff Drive Hardware Interface
 add_library(kpi_rover_diff_drive_hw SHARED
   src/hardware_interfaces/kpi_rover_diff_drive_hw.cpp

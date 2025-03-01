@@ -26,16 +26,14 @@ int main(int argc, char* argv[])
     std::string server_ip = argv[1];
     uint16_t port = static_cast<uint16_t>(std::atoi(argv[2]));
 
-    // Create a TCPTransport and connect to the server.
-    auto transport = std::make_unique<kpi_rover::TCPTransport>();
-    if(!transport->connect(server_ip, port))
-    {
-        std::cerr << "Failed to connect to " << server_ip << ":" << port << std::endl;
-        return EXIT_FAILURE;
-    }
-    std::cout << "Connected to " << server_ip << ":" << port << std::endl;
-
-    // Create ECUBridge instance.
+    // Create a TCPTransport with configuration
+    auto transport = std::make_unique<kpi_rover::TCPTransport>(
+        server_ip,  // host
+        port,       // port
+        1000        // reconnection interval
+    );
+    
+    // Create ECUBridge instance
     kpi_rover::ECUBridge ecu_bridge(std::move(transport));
     
     // Measure time for updateCash(1)
