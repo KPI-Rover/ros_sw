@@ -85,7 +85,7 @@ class ECUEmulatorHandler(socketserver.BaseRequestHandler):
             logging.info(f"Sent response: {response.hex()}")
 
 if __name__ == "__main__":
-    HOST, PORT = "0.0.0.0", 9000
+    HOST, PORT = "localhost", 6000
     with socketserver.ThreadingTCPServer((HOST, PORT), ECUEmulatorHandler) as server:
         logging.info(f"ECU Emulator server running on {HOST}:{PORT}")
         server.serve_forever()
