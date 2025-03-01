@@ -1,4 +1,5 @@
 #include "kpi_rover/hardware_interfaces/kpi_rover_diff_drive_hw.hpp"
+#include "kpi_rover/ecu_bridge/tcp_transport.hpp"
 
 namespace kpi_rover_diff_drive_hw
 {
@@ -8,12 +9,25 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_init()");
         
+        // Create and initialize ECUBridge
+        auto transport = std::make_unique<kpi_rover::TCPTransport>();
+        if(!transport->connect("10.30.30.30", 6000)) {  // TODO: Make configurable
+            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to connect transport");
+            return hardware_interface::CallbackReturn::ERROR;
+        }
+        ecu_bridge_ = std::make_unique<kpi_rover::ECUBridge>(std::move(transport));
+        
         return hardware_interface::CallbackReturn::SUCCESS;
     }
 
     hardware_interface::CallbackReturn KPIRoverDiffDriveHW::on_configure(const rclcpp_lifecycle::State & previous_state)
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_configure()");
+        
+        // Initialize ECU caches
+        if (ecu_bridge_) {
+            ecu_bridge_->updateCash(1);  // TODO: Make driver version configurable
+        }
         
         return hardware_interface::CallbackReturn::SUCCESS;
     }
@@ -49,11 +63,29 @@ namespace kpi_rover_diff_drive_hw
     hardware_interface::return_type KPIRoverDiffDriveHW::write(const rclcpp::Time & time, const rclcpp::Duration & period)
     {
         RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "write()");
-        for (int i = 0; i < 4; ++i)
-        {
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "hw_commands_[%d]: %f", i, hw_commands_[i]);
+        
+        // Use ECUBridge to set motor speeds
+        if (ecu_bridge_) {
+            uint8_t result = ecu_bridge_->setAllMotorsSpeed(
+                convertToRPM100(hw_commands_[0]),
+                convertToRPM100(hw_commands_[1]),
+                convertToRPM100(hw_commands_[2]),
+                convertToRPM100(hw_commands_[3])
+            );
             
+            if (result != 0) {
+                RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), 
+                           "setAllMotorsSpeed failed with code: %d", result);
+            }
         }
+
+        // Log commands for debugging (show both rad/s and RPM)
+        for (int i = 0; i < 4; ++i) {
+            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+                       "hw_commands_[%d]: %f rad/s (%.2f RPM)", 
+                       i, hw_commands_[i], hw_commands_[i] * RAD_S_TO_RPM);
+        }
+        
         return hardware_interface::return_type::OK;
     }
     
@@ -77,12 +109,11 @@ namespace kpi_rover_diff_drive_hw
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "export_command_interfaces()");
         std::vector<hardware_interface::CommandInterface> command_interfaces;
         command_interfaces.push_back(hardware_interface::CommandInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[0]));
-        command_interfaces.push_back(hardware_interface::CommandInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]));
-        command_interfaces.push_back(hardware_interface::CommandInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]));
         command_interfaces.push_back(hardware_interface::CommandInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]));
         return command_interfaces;
     }
-
 }  // namespace kpi_rover_diff_drive_hw
 
 #include "pluginlib/class_list_macros.hpp"

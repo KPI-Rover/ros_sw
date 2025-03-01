@@ -1,7 +1,7 @@
 controller_manager:
   ros__parameters:
   # TODO Return back normal rate. It was decrised for debugging
-    update_rate: 1 
+    update_rate: 50 
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -23,3 +23,4 @@ diff_drive_controller:
     publish_wheel_tf: true
     publish_cmd: true 
     enable_odom_tf: true
+    max_linear_velocity: 0.5

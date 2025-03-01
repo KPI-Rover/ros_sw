@@ -34,6 +34,17 @@ ament_target_dependencies(example_diff_drive
   geometry_msgs
 )
 
+# First create the ECU bridge library
+add_library(ecu_bridge SHARED
+  src/ecu_bridge/tcp_transport.cpp
+  src/ecu_bridge/ecu_bridge.cpp
+)
+
+target_include_directories(ecu_bridge PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 # Diff Drive Hardware Interface
 add_library(kpi_rover_diff_drive_hw SHARED
   src/hardware_interfaces/kpi_rover_diff_drive_hw.cpp
@@ -52,6 +63,7 @@ target_include_directories(kpi_rover_diff_drive_hw PUBLIC
 
 target_link_libraries(kpi_rover_diff_drive_hw
   pluginlib::pluginlib
+  ecu_bridge  # Add ECU bridge library
 )
 
 pluginlib_export_plugin_description_file(hardware_interface plugin_description.xml)
@@ -98,9 +110,20 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install the ECU bridge library
+install(
+  TARGETS ecu_bridge
+  EXPORT export_${PROJECT_NAME}
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
 # Export package dependencies
 ament_export_dependencies(hardware_interface pluginlib rclcpp rclcpp_lifecycle)
 ament_export_include_directories(include)
 ament_export_libraries(kpi_rover_diff_drive_hw)
+ament_export_libraries(ecu_bridge)
 
 ament_package()
