@@ -18,6 +18,13 @@ namespace kpi_rover_diff_drive_hw
         std::string ecu_ip = info_.hardware_parameters["ecu_ip"];
         int ecu_port = std::stoi(info_.hardware_parameters["ecu_port"]);
         
+        // Read encoder ticks parameter
+        if (info_.hardware_parameters.count("encoder_ticks_per_rev") > 0) {
+            encoder_ticks_per_rev_ = std::stoi(info_.hardware_parameters.at("encoder_ticks_per_rev"));
+            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+                        "Using encoder ticks per revolution: %d", encoder_ticks_per_rev_);
+        }
+
         // Create transport with parameters from config
         auto transport = std::make_unique<kpi_rover::TCPTransport>(
             ecu_ip,
@@ -64,7 +71,46 @@ namespace kpi_rover_diff_drive_hw
 
     hardware_interface::return_type KPIRoverDiffDriveHW::read(const rclcpp::Time & time, const rclcpp::Duration & period)
     {
-        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "read()");
+        if (!ecu_bridge_) {
+            return hardware_interface::return_type::ERROR;
+        }
+
+        // Get all encoder values as a vector
+        auto encoder_values = ecu_bridge_->getAllEncoders(true);
+        
+        if (encoder_values.size() != 4) {
+            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), 
+                         "getAllEncoders returned wrong number of values");
+            return hardware_interface::return_type::ERROR;
+        }
+
+        // Log raw encoder values
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+                    "Raw encoder values: [%d, %d, %d, %d]",
+                    encoder_values[0], encoder_values[1], 
+                    encoder_values[2], encoder_values[3]);
+
+        // Convert encoder values to radians and angular velocity
+        for (size_t i = 0; i < 4; ++i) {
+            // Convert encoder ticks to radians
+            double position_rad = (2.0 * M_PI * encoder_values[i]) / encoder_ticks_per_rev_;
+            
+            // Calculate velocity (rad/s) using position difference and period
+            double velocity_rad_s = (position_rad - hw_positions_[i]) / period.seconds();
+            
+            hw_positions_[i] = position_rad;
+            hw_velocities_[i] = velocity_rad_s;
+        }
+
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),
+                    "Joint positions [rad]: [%.2f, %.2f, %.2f, %.2f]",
+                    hw_positions_[0], hw_positions_[1], 
+                    hw_positions_[2], hw_positions_[3]);
+        
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),
+                    "Joint velocities [rad/s]: [%.2f, %.2f, %.2f, %.2f]",
+                    hw_velocities_[0], hw_velocities_[1], 
+                    hw_velocities_[2], hw_velocities_[3]);
         
         return hardware_interface::return_type::OK;
     }
@@ -88,12 +134,17 @@ namespace kpi_rover_diff_drive_hw
             }
         }
 
-        // Log commands for debugging (show both rad/s and RPM)
-        for (int i = 0; i < 4; ++i) {
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
-                       "hw_commands_[%d]: %f rad/s (%.2f RPM)", 
-                       i, hw_commands_[i], hw_commands_[i] * RAD_S_TO_RPM);
-        }
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+                    "Commands [rad/s]: [%.2f, %.2f, %.2f, %.2f]",
+                    hw_commands_[0], hw_commands_[1], 
+                    hw_commands_[2], hw_commands_[3]);
+
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+                    "Commands [RPM]: [%.2f, %.2f, %.2f, %.2f]",
+                    hw_commands_[0] * RAD_S_TO_RPM,
+                    hw_commands_[1] * RAD_S_TO_RPM,
+                    hw_commands_[2] * RAD_S_TO_RPM,
+                    hw_commands_[3] * RAD_S_TO_RPM);
         
         return hardware_interface::return_type::OK;
     }
