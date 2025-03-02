@@ -15,7 +15,7 @@ diff_drive_controller:
     right_wheel_names: ["front_right_wheel_joint", "rear_right_wheel_joint"]
 
     wheel_separation: 0.764
-    wheel_radius: 0.183
+    wheel_radius: 0.035
 
     publish_rate: 50.0
     # odom_frame_id: odom
@@ -23,4 +23,5 @@ diff_drive_controller:
     publish_wheel_tf: true
     publish_cmd: true 
     enable_odom_tf: true
-    max_linear_velocity: 0.5
+    linear:
+      x: {min_velocity: -1.0, max_velocity: 1.0}
