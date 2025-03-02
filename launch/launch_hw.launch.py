@@ -10,6 +10,21 @@ def generate_launch_description():
     # Declare launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     sim_mode = LaunchConfiguration('sim_mode', default='false')
+    ecu_ip = LaunchConfiguration('ecu_ip')
+    ecu_port = LaunchConfiguration('ecu_port')
+
+    ld = LaunchDescription([
+        DeclareLaunchArgument(
+            'ecu_ip',
+            default_value='10.30.30.30',
+            description='IP address of the ECU'
+        ),
+        DeclareLaunchArgument(
+            'ecu_port',
+            default_value='6000',
+            description='Port number of the ECU'
+        )
+    ])
 
     # Package paths
     package_name = 'kpi_rover'
@@ -20,7 +35,9 @@ def generate_launch_description():
     robot_description = Command([
         'xacro ', urdf_file,
         ' use_sim_time:=', use_sim_time,
-        ' sim_mode:=', sim_mode
+        ' sim_mode:=', sim_mode,
+        ' ecu_ip:=', ecu_ip,
+        ' ecu_port:=', ecu_port
     ])
 
     # Controller configuration
@@ -33,9 +50,6 @@ def generate_launch_description():
     # RViz configuration file
     rviz_config_file = os.path.join(pkg_share, 'description', 'robot.rviz')
 
-    # Launch description
-    ld = LaunchDescription()
-
     # Start robot state publisher
     ld.add_action(Node(
         package='robot_state_publisher',
@@ -44,11 +58,16 @@ def generate_launch_description():
         output='screen'
     ))
 
-    # Start controller manager
+    # Start controller manager with additional parameters
     controller_manager = Node(
         package='controller_manager',
         executable='ros2_control_node',
-        parameters=[{'robot_description': robot_description}, controllers_config],
+        parameters=[
+            {'robot_description': robot_description},
+            controllers_config,
+            {'ecu_ip': ecu_ip},
+            {'ecu_port': ecu_port}
+        ],
         output='screen'
     )
     ld.add_action(controller_manager)

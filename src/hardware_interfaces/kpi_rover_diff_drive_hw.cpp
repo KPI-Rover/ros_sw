@@ -9,11 +9,20 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_init()");
         
-        // Create transport with direct parameters
+        if (!info_.hardware_parameters.count("ecu_ip") ||
+            !info_.hardware_parameters.count("ecu_port")) {
+            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Missing ECU connection parameters");
+            return hardware_interface::CallbackReturn::ERROR;
+        }
+
+        std::string ecu_ip = info_.hardware_parameters["ecu_ip"];
+        int ecu_port = std::stoi(info_.hardware_parameters["ecu_port"]);
+        
+        // Create transport with parameters from config
         auto transport = std::make_unique<kpi_rover::TCPTransport>(
-            "10.30.30.30",  // TODO: Get from ROS params
-            6000,           // TODO: Get from ROS params
-            kpi_rover::DEFAULT_RECONNECT_INTERVAL_MS // Reconnection interval
+            ecu_ip,
+            ecu_port,
+            kpi_rover::DEFAULT_RECONNECT_INTERVAL_MS
         );
         ecu_bridge_ = std::make_unique<kpi_rover::ECUBridge>(std::move(transport));
         
