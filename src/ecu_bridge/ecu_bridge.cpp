@@ -84,8 +84,8 @@ namespace kpi_rover
                 break;
             }
             RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), 
-                "Connection failed, retrying in %d ms...", TIMEOUT_MS);
-            std::this_thread::sleep_for(std::chrono::milliseconds(TIMEOUT_MS));
+                "Connection failed, retrying in %d ms...", RECONNECTION_TIMEOUT_MS);
+            std::this_thread::sleep_for(std::chrono::milliseconds(RECONNECTION_TIMEOUT_MS));
         }
     }
 

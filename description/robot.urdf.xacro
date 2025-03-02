@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro"  name="robot">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robot">
 
     <xacro:arg name="sim_mode" default="true"/>
+    <xacro:arg name="ecu_ip" default="10.30.30.30"/>
+    <xacro:arg name="ecu_port" default="6000"/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />

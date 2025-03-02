@@ -16,6 +16,8 @@
         <ros2_control name="KPIRoverDiffDriveHW" type="system">
             <hardware>
                 <plugin>kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW</plugin>
+                <param name="ecu_ip">$(arg ecu_ip)</param>
+                <param name="ecu_port">$(arg ecu_port)</param>
             </hardware>
             <xacro:wheel_interface prefix="front_left_wheel" />
             <xacro:wheel_interface prefix="front_right_wheel" />

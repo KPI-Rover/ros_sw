@@ -16,7 +16,7 @@
 
 namespace kpi_rover
 {
-    static constexpr int TIMEOUT_MS = 1000;
+    static constexpr int RECONNECTION_TIMEOUT_MS = 1000;
     static constexpr uint8_t CMD_GET_API_VERSION      = 0x01;
     static constexpr uint8_t CMD_SET_MOTOR_SPEED      = 0x02;
     static constexpr uint8_t CMD_SET_ALL_MOTORS_SPEED = 0x03;
