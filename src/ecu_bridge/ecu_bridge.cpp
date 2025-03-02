@@ -103,8 +103,9 @@ namespace kpi_rover
                 std::unique_lock<std::mutex> lock(queue_mutex_);
                 queue_cv_.wait(lock, [&]
                                { return stop_ || !request_queue_.empty(); });
-                if (stop_ && request_queue_.empty())
-                    break;
+                
+                if (stop_) break;
+                
                 item = std::move(request_queue_.front());
                 request_queue_.pop();
             }

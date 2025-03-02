@@ -49,6 +49,8 @@ private:
       return static_cast<int32_t>(rad_s * RAD_S_TO_RPM * 100.0);
   }
 
+  int32_t encoder_ticks_per_rev_{4096};  // Default value, will be overridden by parameter
+
 };
 }  // namespace kpi_rover_diff_drive_hw
 
