@@ -9,7 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
-    pkg_dir = get_package_share_directory('apricotka-robot-car')
+    pkg_dir = get_package_share_directory('kpi_rover')
 
     sim_time_arg = DeclareLaunchArgument(
         'use_sim_time', default_value='True',
