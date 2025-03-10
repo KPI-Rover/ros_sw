@@ -111,7 +111,7 @@ install(
 )
 
 install(
-  DIRECTORY config description executables launch params worlds
+  DIRECTORY config description executables launch params worlds maps
   DESTINATION share/${PROJECT_NAME}
 )
 

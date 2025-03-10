@@ -18,7 +18,7 @@ from launch_ros.actions import Node
 
 
 # Define package names and paths.
-package_name = 'apricotka-robot-car'
+package_name = 'kpi_rover'
 ros_gz_sim = get_package_share_directory('ros_gz_sim')
 
 # Declare and initialize the use_sim_time parameter
