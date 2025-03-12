@@ -91,12 +91,24 @@ nav = IncludeLaunchDescription(
     launch_arguments={'use_sim_time': use_sim_time}.items()
 )
 
-
+# Launch camera node.
+camera = Node(
+    package='v4l2_camera',
+    executable='v4l2_camera_node',
+    name='camera_node ',
+    output='screen',
+    parameters= {
+        'image_size': "[640, 480]",
+        'video_device':"/dev/video0"}.items(),
+    remappings=[('/image_raw','/camera/image_raw')]
+    
+)
 
 # Add all components into the LaunchDescription in the desired sequence.
 ld.add_action(motors_control)                # Start the robot state publisher.
 ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
 ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
 ld.add_action(nav)                    # Start navigation stack.
+ld.add_action(camera)                    # Start publishing images from camera.
 def generate_launch_description():
     return ld
