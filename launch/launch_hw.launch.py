@@ -47,9 +47,6 @@ def generate_launch_description():
         'kpi_rover_controllers.yaml'
     ])
 
-    # RViz configuration file
-    rviz_config_file = os.path.join(pkg_share, 'description', 'robot.rviz')
-
     # Start robot state publisher
     ld.add_action(Node(
         package='robot_state_publisher',
@@ -100,15 +97,5 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': use_sim_time}.items()
     )
     ld.add_action(joystick_launch_cmd)
-
-    # Start RViz2
-    ld.add_action(Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='screen',
-        arguments=['-d', rviz_config_file],
-        parameters=[{'use_sim_time': use_sim_time}]
-    ))
 
     return ld
