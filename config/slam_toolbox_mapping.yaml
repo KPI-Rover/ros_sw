@@ -15,12 +15,12 @@ slam_toolbox:
     base_frame: base_footprint
     scan_topic: /scan
     use_map_saver: true
-    mode: localization
+    mode: mapping
 
     # if you'd like to immediately start continuing a map at a given pose
     # or at the dock, but they are mutually exclusive, if pose is given
     # will use pose
-    map_file_name: $(find-pkg-share kpi_rover)/maps/my_map_serial
+    # map_file_name:  /workspace/src/kpi_rover/maps/my_map_serial
     # map_start_pose: [0.0, 0.0, 0.0]
     map_start_at_dock: true
 
@@ -29,8 +29,8 @@ slam_toolbox:
     transform_publish_period: 0.02 #if 0 never publishes odometry
     map_update_interval: 2.0
     resolution: 0.04
-    min_laser_range: 0.0 #for rastering images
-    max_laser_range: 10.0 #for rastering images
+    min_laser_range: 0.01 #for rastering images
+    max_laser_range: 16.0 #for rastering images
     minimum_time_interval: 0.5
     transform_timeout: 0.2
     tf_buffer_duration: 30.0
