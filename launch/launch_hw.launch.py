@@ -89,13 +89,4 @@ def generate_launch_description():
     )
     ld.add_action(controller_spawner)
 
-    # Include joystick launch file
-    joystick_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory(package_name), 'launch', 'joystick.launch.py')
-        ),
-        launch_arguments={'use_sim_time': use_sim_time}.items()
-    )
-    ld.add_action(joystick_launch_cmd)
-
     return ld
