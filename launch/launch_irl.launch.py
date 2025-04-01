@@ -50,7 +50,7 @@ lidar = IncludeLaunchDescription(
                 os.path.join(get_package_share_directory('cspc_lidar'), 'launch', 'lidar.launch.py')
             )
         )       
-# Launch ros2_control system for driving real motors + joystick control
+# Launch ros2_control system for driving real motors
 motors_control =  IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
         os.path.join(get_package_share_directory(package_name), 'launch', 'launch_hw.launch.py')
