@@ -18,6 +18,8 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
+from launch.substitutions import PythonExpression
 from launch_ros.actions import Node
 
 # Define the common clock parameter (not using simulation)
@@ -26,6 +28,7 @@ use_sim_time = LaunchConfiguration('use_sim_time', default='false')
 # Define parameters for launch_hw
 ecu_ip = LaunchConfiguration('ecu_ip')
 ecu_port = LaunchConfiguration('ecu_port')
+lidar_model = LaunchConfiguration('lidar_model')
 
 package_name = 'kpi_rover'
 
@@ -41,15 +44,34 @@ ld = LaunchDescription([
             'ecu_port',
             default_value='6000',
             description='Port number of the ECU'
+        ),
+        DeclareLaunchArgument(
+            'lidar_model',
+            default_value='rplidar',
+            description='Lidar model to be used. Supported models: rplidar, coin'
         )
     ])
 
 # Launch lidar node from cspc_lidar package
-lidar = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('cspc_lidar'), 'launch', 'lidar.launch.py')
-            )
-        )       
+lidar_coin = IncludeLaunchDescription(
+    PythonLaunchDescriptionSource(
+        os.path.join(get_package_share_directory('cspc_lidar'), 'launch', 'lidar.launch.py')
+    ),
+    condition=IfCondition(PythonExpression(["'", lidar_model, "' == 'coin'"]))
+)
+
+lidar_rp = IncludeLaunchDescription(
+    PythonLaunchDescriptionSource(
+        os.path.join(get_package_share_directory('rplidar_ros'), 'launch', 'rplidar_c1_launch.py')
+    ),
+    launch_arguments={
+        'serial_port': '/dev/lidar',
+        'frame_id': 'laser_frame',
+    }.items(),
+    condition=IfCondition(PythonExpression(["'", lidar_model, "' == 'rplidar'"]))
+)
+
+
 # Launch ros2_control system for driving real motors
 motors_control =  IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
@@ -110,12 +132,13 @@ camera = Node(
 )
 
 # Add all components into the LaunchDescription in the desired sequence.
-
 ld.add_action(motors_control)         # Start all nodes for motors control.
 ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
-ld.add_action(lidar)                  # Run lidar node
 ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
 ld.add_action(nav)                    # Start navigation stack.
-ld.add_action(camera)                 # Start publishing images from camera.
+ld.add_action(lidar_rp)               # Run lidar node
+ld.add_action(lidar_coin)             # Run lidar node
+# ld.add_action(camera)                 # Start publishing images from camera.
+
 def generate_launch_description():
     return ld

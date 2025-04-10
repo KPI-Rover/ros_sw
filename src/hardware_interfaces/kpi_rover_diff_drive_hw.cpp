@@ -85,7 +85,7 @@ namespace kpi_rover_diff_drive_hw
         }
 
         // Log raw encoder values
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), 
                     "Raw encoder values: [%d, %d, %d, %d]",
                     encoder_values[0], encoder_values[1], 
                     encoder_values[2], encoder_values[3]);
@@ -102,12 +102,12 @@ namespace kpi_rover_diff_drive_hw
             hw_velocities_[i] = velocity_rad_s;
         }
 
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),
+        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME),
                     "Joint positions [rad]: [%.2f, %.2f, %.2f, %.2f]",
                     hw_positions_[0], hw_positions_[1], 
                     hw_positions_[2], hw_positions_[3]);
         
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),
+        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME),
                     "Joint velocities [rad/s]: [%.2f, %.2f, %.2f, %.2f]",
                     hw_velocities_[0], hw_velocities_[1], 
                     hw_velocities_[2], hw_velocities_[3]);
@@ -134,12 +134,12 @@ namespace kpi_rover_diff_drive_hw
             }
         }
 
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), 
                     "Commands [rad/s]: [%.2f, %.2f, %.2f, %.2f]",
                     hw_commands_[0], hw_commands_[1], 
                     hw_commands_[2], hw_commands_[3]);
 
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), 
                     "Commands [RPM]: [%.2f, %.2f, %.2f, %.2f]",
                     hw_commands_[0] * RAD_S_TO_RPM,
                     hw_commands_[1] * RAD_S_TO_RPM,
