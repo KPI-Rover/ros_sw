@@ -1,6 +1,5 @@
-#include "kpi_rover/ecu_bridge/ecu_bridge.hpp"
+#include "kpi_rover/ecu_bridge/ecu_bridge_motors.hpp"
 #include <iostream>
-#include <chrono>
 #include <arpa/inet.h>
 #include <cstring>
 #include <functional>
@@ -9,15 +8,12 @@ namespace kpi_rover
 {
 
     // Constructor implementation moved from header
-    ECUBridge::ECUBridge(std::unique_ptr<Transport> transport)
-        : transport_(std::move(transport))
-        , stop_(false)
-        , is_connected_(false)
+    ECUBridgeMotors::ECUBridgeMotors(std::unique_ptr<Transport> transport): ECUBridge(std::move(transport))
     {
-        worker_thread_ = std::thread(&ECUBridge::processQueue, this);
+        worker_thread_ = std::thread(&ECUBridgeMotors::processQueue, this);
     }
 
-    ECUBridge::~ECUBridge()
+    ECUBridgeMotors::~ECUBridgeMotors()
     {
         {
             std::lock_guard<std::mutex> lock(queue_mutex_);
@@ -28,7 +24,7 @@ namespace kpi_rover
             worker_thread_.join();
     }
 
-    size_t ECUBridge::getExpectedResponseLength(uint8_t cmd_id)
+    size_t ECUBridgeMotors::getExpectedResponseLength(uint8_t cmd_id)
     {
         switch (cmd_id)
         {
@@ -47,7 +43,7 @@ namespace kpi_rover
         }
     }
 
-    bool ECUBridge::sendCommand(const std::vector<uint8_t> &request, std::vector<uint8_t> &response, int timeout_ms)
+    bool ECUBridgeMotors::sendCommand(const std::vector<uint8_t> &request, std::vector<uint8_t> &response, int timeout_ms)
     {
         std::promise<std::vector<uint8_t>> prom;
         auto fut = prom.get_future();
@@ -65,31 +61,7 @@ namespace kpi_rover
         return false;
     }
 
-    bool ECUBridge::tryConnect()
-    {
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Attempting to connect...");
-        if (!transport_->connect()) {
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Connection attempt failed");
-            return false;
-        }
-        is_connected_ = true;
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Successfully connected");
-        return true;
-    }
-
-    void ECUBridge::maintainConnection()
-    {
-        while (!is_connected_ && !stop_) {
-            if (tryConnect()) {
-                break;
-            }
-            RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), 
-                "Connection failed, retrying in %d ms...", RECONNECTION_TIMEOUT_MS);
-            std::this_thread::sleep_for(std::chrono::milliseconds(RECONNECTION_TIMEOUT_MS));
-        }
-    }
-
-    void ECUBridge::processQueue()
+    void ECUBridgeMotors::processQueue()
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Starting queue processor");
         
@@ -151,7 +123,7 @@ namespace kpi_rover
      * @param request The command request as a vector of bytes.
      * @return std::future<std::vector<uint8_t>> Future resolving to the raw response.
      */
-    std::future<std::vector<uint8_t>> ECUBridge::enqueueCommand(const std::vector<uint8_t> &request)
+    std::future<std::vector<uint8_t>> ECUBridgeMotors::enqueueCommand(const std::vector<uint8_t> &request)
     {
         std::promise<std::vector<uint8_t>> prom;
         auto fut = prom.get_future();
@@ -163,7 +135,7 @@ namespace kpi_rover
         return fut;
     }
 
-    uint8_t ECUBridge::asyncGetAPIVersionSync(uint8_t driver_version)
+    uint8_t ECUBridgeMotors::asyncGetAPIVersionSync(uint8_t driver_version)
     {
         auto fut = this->enqueueCommand({CMD_GET_API_VERSION, driver_version});
         auto resp = fut.get();
@@ -174,7 +146,7 @@ namespace kpi_rover
         return 0;
     }
 
-    int32_t ECUBridge::asyncGetEncoderSync(uint8_t motor_id)
+    int32_t ECUBridgeMotors::asyncGetEncoderSync(uint8_t motor_id)
     {
         auto fut = this->enqueueCommand({CMD_GET_ENCODER, motor_id});
         auto resp = fut.get();
@@ -192,7 +164,7 @@ namespace kpi_rover
         return 0;
     }
 
-    std::vector<int32_t> ECUBridge::asyncGetAllEncodersSync()
+    std::vector<int32_t> ECUBridgeMotors::asyncGetAllEncodersSync()
     {
         auto fut = this->enqueueCommand({CMD_GET_ALL_ENCODERS});
         auto resp = fut.get();
@@ -209,7 +181,7 @@ namespace kpi_rover
         return std::vector<int32_t>(4, 0);
     }
 
-    uint8_t ECUBridge::getAPIVersion(uint8_t driver_version, bool sync)
+    uint8_t ECUBridgeMotors::getAPIVersion(uint8_t driver_version, bool sync)
     {
         if (sync)
         {
@@ -226,7 +198,7 @@ namespace kpi_rover
         }
     }
 
-    int32_t ECUBridge::getEncoder(uint8_t motor_id, bool sync)
+    int32_t ECUBridgeMotors::getEncoder(uint8_t motor_id, bool sync)
     {
         if (sync)
         {
@@ -244,7 +216,7 @@ namespace kpi_rover
         }
     }
 
-    std::vector<int32_t> ECUBridge::getAllEncoders(bool sync)
+    std::vector<int32_t> ECUBridgeMotors::getAllEncoders(bool sync)
     {
         if (sync)
         {
@@ -263,7 +235,7 @@ namespace kpi_rover
         }
     }
 
-    uint8_t ECUBridge::setMotorSpeed(uint8_t motor_id, int32_t speed)
+    uint8_t ECUBridgeMotors::setMotorSpeed(uint8_t motor_id, int32_t speed)
     {
         std::vector<uint8_t> vec = motorSpeedResultCache_.get();
         if(vec.size() < 4)
@@ -290,7 +262,7 @@ namespace kpi_rover
         return cached_result;
     }
 
-    uint8_t ECUBridge::setAllMotorsSpeed(int32_t speed1, int32_t speed2, int32_t speed3, int32_t speed4)
+    uint8_t ECUBridgeMotors::setAllMotorsSpeed(int32_t speed1, int32_t speed2, int32_t speed3, int32_t speed4)
     {
         uint8_t cached_result = allMotorsSpeedResultCache_.get();
         // Trigger asynchronous update.
@@ -313,7 +285,7 @@ namespace kpi_rover
         return cached_result;
     }
 
-    void ECUBridge::updateCash(uint8_t driver_version)
+    void ECUBridgeMotors::updateCash(uint8_t driver_version)
     {
         getAPIVersion(driver_version, true);
         getAllEncoders(true);

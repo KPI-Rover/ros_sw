@@ -31,7 +31,7 @@ namespace kpi_rover_diff_drive_hw
             ecu_port,
             kpi_rover::DEFAULT_RECONNECT_INTERVAL_MS
         );
-        ecu_bridge_ = std::make_unique<kpi_rover::ECUBridge>(std::move(transport));
+        ecu_bridge_ = std::make_unique<kpi_rover::ECUBridgeMotors>(std::move(transport));
         
         // Set all initial values to zero
         memset(&hw_positions_, 0, sizeof(hw_positions_));
@@ -124,7 +124,7 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "write()");
         
-        // Use ECUBridge to set motor speeds
+        // Use ECUBridgeMotors to set motor speeds
         if (ecu_bridge_) {
             uint8_t result = ecu_bridge_->setAllMotorsSpeed(
                 convertToRPM100(hw_commands_[0]),
