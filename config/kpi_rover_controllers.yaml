@@ -9,6 +9,9 @@ controller_manager:
     diff_drive_controller:
       type: diff_drive_controller/DiffDriveController
 
+    imu_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
 diff_drive_controller:
   ros__parameters:
     left_wheel_names: ["front_left_wheel_joint", "rear_left_wheel_joint"]
@@ -25,3 +28,8 @@ diff_drive_controller:
     enable_odom_tf: false
     linear:
       x: {min_velocity: -10.0, max_velocity: 10.0}
+
+imu_broadcaster:
+  ros__parameters:
+    sensor_name: "imu"
+    frame_id:  "imu_link"
