@@ -41,6 +41,11 @@ ld = LaunchDescription([
             'ecu_port',
             default_value='6000',
             description='Port number of the ECU'
+        ),
+        DeclareLaunchArgument(
+            'udp_port',
+            default_value='9999',
+            description='Port number of the UDP server to listen for IMU data from ECU'
         )
     ])
 
@@ -58,7 +63,8 @@ motors_control =  IncludeLaunchDescription(
     launch_arguments={
         'use_sim_time': use_sim_time,
         'ecu_ip': ecu_ip,
-        'ecu_port': ecu_port
+        'ecu_port': ecu_port,
+        'udp_port': udp_port
     }.items()
 )
 
