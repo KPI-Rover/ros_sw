@@ -12,6 +12,7 @@ def generate_launch_description():
     sim_mode = LaunchConfiguration('sim_mode', default='false')
     ecu_ip = LaunchConfiguration('ecu_ip')
     ecu_port = LaunchConfiguration('ecu_port')
+    udp_port = LaunchConfiguration('udp_port')
 
     ld = LaunchDescription([
         DeclareLaunchArgument(
@@ -23,6 +24,11 @@ def generate_launch_description():
             'ecu_port',
             default_value='6000',
             description='Port number of the ECU'
+        ),
+        DeclareLaunchArgument(
+            'udp_port',
+            default_value='9999',
+            description='Port number of the UDP server to listen for IMU data from ECU'
         )
     ])
 
@@ -63,7 +69,8 @@ def generate_launch_description():
             {'robot_description': robot_description},
             controllers_config,
             {'ecu_ip': ecu_ip},
-            {'ecu_port': ecu_port}
+            {'ecu_port': ecu_port},
+            {'udp_port': udp_port}
         ],
         output='screen'
     )
@@ -84,7 +91,12 @@ def generate_launch_description():
                 executable='spawner',
                 arguments=['diff_drive_controller'],
                 output='screen'
-            )
+            ),
+            Node(
+                package="controller_manager",
+                executable="spawner",
+                arguments=["imu_broadcaster"],
+            )   
         ]
     )
     ld.add_action(controller_spawner)
