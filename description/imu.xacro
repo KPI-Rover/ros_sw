@@ -12,7 +12,7 @@
         <sensor type="imu" name="imu">
             <always_on>1</always_on>
             <visualize>false</visualize>
-            <topic>imu</topic>
+            <topic>/imu_broadcaster/imu</topic>
         </sensor>
     </gazebo>
 </robot>
