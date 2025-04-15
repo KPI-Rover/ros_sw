@@ -12,6 +12,7 @@ namespace kpi_rover
 
     ECUBridgeIMU::ECUBridgeIMU(std::unique_ptr<Transport> transport): ECUBridge(std::move(transport))
     {
+        memset(&latestIMUData_, 0, sizeof(latestIMUData_));
         worker_thread_ = std::thread(&ECUBridgeIMU::processIMUData, this);
     }
 
