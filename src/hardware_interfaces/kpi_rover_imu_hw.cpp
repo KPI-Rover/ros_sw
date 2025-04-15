@@ -61,13 +61,13 @@ namespace kpi_rover_imu_hw
     std::vector<hardware_interface::StateInterface> state_interfaces;
 
     state_interfaces.emplace_back(hardware_interface::StateInterface(
-      "imu", "orientation.x", &imu_data_.orient[0]));
+      "imu", "orientation.w", &imu_data_.orient[0]));
     state_interfaces.emplace_back(hardware_interface::StateInterface(
-      "imu", "orientation.y", &imu_data_.orient[1]));
+      "imu", "orientation.x", &imu_data_.orient[1]));
     state_interfaces.emplace_back(hardware_interface::StateInterface(
-      "imu", "orientation.z", &imu_data_.orient[2]));
+      "imu", "orientation.y", &imu_data_.orient[2]));
     state_interfaces.emplace_back(hardware_interface::StateInterface(
-      "imu", "orientation.w", &imu_data_.orient[3]));
+      "imu", "orientation.z", &imu_data_.orient[3]));
 
     state_interfaces.emplace_back(hardware_interface::StateInterface(
       "imu", "angular_velocity.x", &imu_data_.ang_vel[0]));
