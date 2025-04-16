@@ -11,14 +11,12 @@ namespace kpi_rover
     ECUBridgeMotors::ECUBridgeMotors(std::unique_ptr<Transport> transport): ECUBridge(std::move(transport))
     {
         worker_thread_ = std::thread(&ECUBridgeMotors::processQueue, this);
+        LOGGER_NAME = "ECUBridgeMotors";
     }
 
     ECUBridgeMotors::~ECUBridgeMotors()
     {
-        {
-            std::lock_guard<std::mutex> lock(queue_mutex_);
-            stop_ = true;
-        }
+        stop_ = true;
         queue_cv_.notify_all();
         if (worker_thread_.joinable())
             worker_thread_.join();
@@ -68,15 +66,13 @@ namespace kpi_rover
         // First establish connection
         maintainConnection();
 
-        while (true)
+        while (!stop_)
         {
             std::pair<std::vector<uint8_t>, std::promise<std::vector<uint8_t>>> item;
             {
                 std::unique_lock<std::mutex> lock(queue_mutex_);
                 queue_cv_.wait(lock, [&]
-                               { return stop_ || !request_queue_.empty(); });
-                
-                if (stop_) break;
+                               { return !request_queue_.empty(); });
                 
                 item = std::move(request_queue_.front());
                 request_queue_.pop();

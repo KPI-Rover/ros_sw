@@ -23,13 +23,13 @@ namespace kpi_rover
              * @brief Destructor.
              */
             virtual ~ECUBridge() {};
-        private:
-            bool stop_;
-            std::atomic<bool> is_connected_;
-            static constexpr const char* LOGGER_NAME = "ECUBridge";
 
         protected:
             std::unique_ptr<Transport> transport_;
+            std::string LOGGER_NAME;
+            std::atomic<bool> stop_;
+            std::atomic<bool> is_connected_;
+
             bool tryConnect()
                 {
                     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Attempting to connect...");

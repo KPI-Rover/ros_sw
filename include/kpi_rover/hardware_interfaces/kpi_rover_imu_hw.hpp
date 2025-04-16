@@ -33,6 +33,7 @@ public:
 private:
   std::unique_ptr<kpi_rover::ECUBridgeIMU> ecu_bridge_;
   struct kpi_rover::IMUData imu_data_;
+  int udp_port_;
 };
 }
 

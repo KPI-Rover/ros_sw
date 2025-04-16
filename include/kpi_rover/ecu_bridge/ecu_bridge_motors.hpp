@@ -112,7 +112,6 @@ namespace kpi_rover
         std::queue<std::pair<std::vector<uint8_t>, std::promise<std::vector<uint8_t>>>> request_queue_;
         std::mutex queue_mutex_;
         std::condition_variable queue_cv_;
-        bool stop_;
         std::thread worker_thread_;
 
         // Get caches.
@@ -128,11 +127,6 @@ namespace kpi_rover
         uint8_t asyncGetAPIVersionSync(uint8_t driver_version);
         int32_t asyncGetEncoderSync(uint8_t motor_id);
         std::vector<int32_t> asyncGetAllEncodersSync();
-
-        // New connection management members
-        std::atomic<bool> is_connected_;
-
-        static constexpr const char* LOGGER_NAME = "ECUBridgeMotors";
     };
 
 } // namespace kpi_rover
