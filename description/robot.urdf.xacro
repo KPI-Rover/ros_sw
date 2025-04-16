@@ -8,10 +8,9 @@
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />
     <xacro:include filename="robot_core.xacro" />
-    <xacro:include filename="camera.xacro" />
-    <xacro:include filename="water_tank.xacro" />
-<!-- <xacro:include filename="flexible_rod.xacro" /> -->
+    <!-- <xacro:include filename="camera.xacro" /> -->
+    <!-- <xacro:include filename="flexible_rod.xacro" /> -->
     <xacro:include filename="ros2_control.xacro" />
-    <xacro:include filename="imu.xacro" />
+    <!-- <xacro:include filename="imu.xacro" /> -->
     <xacro:include filename="lidar.xacro" />
 </robot>
