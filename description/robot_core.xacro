@@ -42,7 +42,7 @@
             <geometry>
                 <mesh filename = "package://kpi_rover/description/meshes/kpi_rover_body.stl" scale="0.001 0.001 0.001"/>
             </geometry>
-            <material name="white"/>
+            <material name="yellow"/>
         </visual>
         <collision>
             <geometry>
