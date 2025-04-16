@@ -79,7 +79,7 @@ def generate_launch_description():
 
     # Delay controller spawner to ensure controller_manager is ready
     controller_spawner = TimerAction(
-        period=5.0,  # Delay to give time for controller_manager to start
+        period=3.0,  # Delay to give time for controller_manager to start
         actions=[
             Node(
                 package='controller_manager',

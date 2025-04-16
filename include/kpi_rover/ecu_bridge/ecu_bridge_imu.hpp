@@ -56,10 +56,8 @@ namespace kpi_rover
 
         private:
             std::mutex imu_data_mutex_;
-            std::atomic<bool> stop_;
             std::thread worker_thread_;
             std::condition_variable newIMUData_cv_;
-            std::atomic<bool> is_connected_;
             struct IMUData latestIMUData_;
             bool IMUDataUpdated_ = false;  
             uint16_t last_msg_seq_num_ = -1;
@@ -68,9 +66,6 @@ namespace kpi_rover
             
             template <typename ValueType>
             ValueType uint32FloatToValueType(uint32_t value);
-
-            static constexpr const char* LOGGER_NAME = "ECUBridgeIMU";
-
     };
 
 }

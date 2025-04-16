@@ -14,10 +14,12 @@ namespace kpi_rover
     {
         memset(&latestIMUData_, 0, sizeof(latestIMUData_));
         worker_thread_ = std::thread(&ECUBridgeIMU::processIMUData, this);
+        LOGGER_NAME = "ECUBridgeIMU";
     }
 
     ECUBridgeIMU::~ECUBridgeIMU()
     {
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "In destructor");
         stop_ = true; //signal worker thread to stop processing
 
         if (worker_thread_.joinable())

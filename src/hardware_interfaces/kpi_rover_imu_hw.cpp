@@ -15,12 +15,7 @@ namespace kpi_rover_imu_hw
         return hardware_interface::CallbackReturn::ERROR;
     }
 
-    int udp_port = std::stoi(info_.hardware_parameters["udp_port"]);
-
-    auto transport = std::make_unique<kpi_rover::UDPTransport>(
-        udp_port
-    );
-    ecu_bridge_ = std::make_unique<kpi_rover::ECUBridgeIMU>(std::move(transport));
+    udp_port_ = std::stoi(info_.hardware_parameters["udp_port"]);
     
 
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -43,6 +38,10 @@ namespace kpi_rover_imu_hw
   hardware_interface::CallbackReturn KPIRoverIMUHW::on_activate(const rclcpp_lifecycle::State & previous_state)
   {
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_activate()");
+    auto transport = std::make_unique<kpi_rover::UDPTransport>(
+      udp_port_
+    );
+    ecu_bridge_ = std::make_unique<kpi_rover::ECUBridgeIMU>(std::move(transport));
 
     return hardware_interface::CallbackReturn::SUCCESS;
   }
@@ -50,7 +49,7 @@ namespace kpi_rover_imu_hw
   hardware_interface::CallbackReturn KPIRoverIMUHW::on_deactivate(const rclcpp_lifecycle::State & previous_state)
   {
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_deactivate()");
-
+    ecu_bridge_.reset();
     return hardware_interface::CallbackReturn::SUCCESS;
   }
 
