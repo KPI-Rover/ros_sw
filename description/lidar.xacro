@@ -2,15 +2,14 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
    
     <joint name="laser_joint" type="fixed">
-        <parent link="water_tank_link"/>
+        <parent link="base_link"/>
         <child link="laser_frame"/>
-        <origin xyz="0 0 0.15" rpy="0 0 0"/>
+        <origin xyz="0 0 0.11" rpy="0 0 0"/>
     </joint>
     <link name="laser_frame">
         <visual>
-            <origin xyz="0.1 0 0.05" rpy="0 0 0"/>
             <geometry>
-                <mesh filename = "package://description/meshes/lidar.dae"/>
+                <mesh filename = "package://kpi_rover/description/meshes/lidar.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </visual>
         <inertial>
