@@ -33,6 +33,11 @@ namespace kpi_rover_diff_drive_hw
         );
         ecu_bridge_ = std::make_unique<kpi_rover::ECUBridge>(std::move(transport));
         
+        // Set all initial values to zero
+        memset(&hw_positions_, 0, sizeof(hw_positions_));
+        memset(&hw_velocities_, 0, sizeof(hw_velocities_));
+        memset(&hw_commands_, 0, sizeof(hw_commands_));
+
         return hardware_interface::CallbackReturn::SUCCESS;
     }
 
