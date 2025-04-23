@@ -13,7 +13,16 @@ def generate_launch_description():
     # Package paths
     package_name = 'kpi_rover'
     pkg_share = get_package_share_directory(package_name)
-   
+
+    # Convert camera format for viewing in rviz
+    ld.add_action(Node(
+        package='kpi_rover',
+        executable='yuv422_compressed_to_rgb8_converter.py',
+        name='yuv422_compressed_to_rgb8_converter',
+        output='screen',
+        remappings=[('/in','/image_raw/compressed'),
+                    ('/out','/image_rgb8')]
+    ))
 
     # RViz configuration file
     rviz_config_file = os.path.join(pkg_share, 'config', 'view_bot.rviz')

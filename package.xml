@@ -47,8 +47,11 @@
   <test_depend>ament_lint_common</test_depend>
 
   <exec_depend>libfastcdr-dev</exec_depend>
+
+  <depend>rclpy</depend>
   
   <export>
     <build_type>ament_cmake</build_type>
+    <build_type>ament_cmake_python</build_type>
   </export>
 </package>
