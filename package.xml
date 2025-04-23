@@ -41,6 +41,7 @@
   <depend>nav2_bringup</depend>
   <depend>twist_stamper</depend>
   <depend>v4l2_camera</depend>
+  <depend>image_transport_plugins</depend>
     
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

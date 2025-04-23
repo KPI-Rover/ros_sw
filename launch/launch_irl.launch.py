@@ -103,8 +103,9 @@ camera = Node(
     name='camera_node',
     output='screen',
     parameters= [{
-        'image_size': [640, 480],
-        'video_device':"/dev/video0"}],
+        'image_size': [320, 240],
+        'video_device':"/dev/video0",
+        'output_encoding': "yuv422_yuy2"}],
     remappings=[('/image_raw','/camera/image_raw')]
 
 )
