@@ -10,12 +10,12 @@ namespace kpi_rover_imu_hw
   {
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_init()");
 
-    if (!info_.hardware_parameters.count("udp_port")) {
-        RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Missing UDP port parameter");
+    if (!info_.hardware_parameters.count("rpi_port")) {
+        RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Missing RPI port parameter");
         return hardware_interface::CallbackReturn::ERROR;
     }
 
-    udp_port_ = std::stoi(info_.hardware_parameters["udp_port"]);
+    rpi_port_ = std::stoi(info_.hardware_parameters["rpi_port"]);
     
 
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -39,7 +39,7 @@ namespace kpi_rover_imu_hw
   {
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_activate()");
     auto transport = std::make_unique<kpi_rover::UDPTransport>(
-      udp_port_
+      rpi_port_
     );
     ecu_bridge_ = std::make_unique<kpi_rover::ECUBridgeIMU>(std::move(transport));
 
