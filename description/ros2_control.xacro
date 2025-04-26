@@ -17,7 +17,9 @@
             <hardware>
                 <plugin>kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW</plugin>
                 <param name="ecu_ip">$(arg ecu_ip)</param>
+                <param name="rpi_port">$(arg rpi_port)</param>
                 <param name="ecu_port">$(arg ecu_port)</param>
+                <param name="rpi_port">$(arg rpi_port)</param>
                 <param name="encoder_ticks_per_rev">4096</param>
             </hardware>
             <xacro:wheel_interface prefix="front_left_wheel" />
@@ -31,7 +33,7 @@
         <ros2_control name="KPIRoverIMUHW" type="sensor">
             <hardware>
                 <plugin>kpi_rover_imu_hw/KPIRoverIMUHW</plugin>
-                <param name="udp_port">$(arg udp_port)</param>
+                <param name="rpi_port">$(arg rpi_port)</param>
             </hardware>
             <sensor name="imu">
                 <state_interface name="orientation.x" />

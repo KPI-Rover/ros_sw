@@ -8,9 +8,10 @@
 namespace kpi_rover
 {
 
-    TCPTransport::TCPTransport(const std::string& host, uint16_t port, int reconnect_interval_ms)
+    TCPTransport::TCPTransport(const std::string& host, uint16_t connection_port, uint16_t bind_port,int reconnect_interval_ms)
         : host_(host)
-        , port_(port)
+        , connection_port_(connection_port)
+        , bind_port_(bind_port)
         , reconnect_interval_ms_(reconnect_interval_ms)
         , sockfd_(-1)
     {
@@ -24,16 +25,26 @@ namespace kpi_rover
 
     bool TCPTransport::connect()
     {
+        if (sockfd_ != -1)
+            close(sockfd_);
+        
         sockfd_ = ::socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd_ < 0)
             return false;
 
         sockaddr_in serv_addr{};
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(port_);
+        serv_addr.sin_port = htons(connection_port_);
         if (::inet_pton(AF_INET, host_.c_str(), &serv_addr.sin_addr) <= 0)
             return false;
-            
+
+        sockaddr_in cli_addr{};
+        cli_addr.sin_family = AF_INET;
+        cli_addr.sin_port = htons(bind_port_);
+        ::inet_pton(AF_INET, "0.0.0.0", &cli_addr.sin_addr);
+        
+        if (::bind(sockfd_, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+            return false;
         return ::connect(sockfd_, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) >= 0;
     }
 
