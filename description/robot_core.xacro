@@ -89,12 +89,12 @@
         <gazebo reference="${prefix}_link">
             <material name="gazebo_blue"/>
             <mu1 value="${mu1}"/>
- <!--           <mu2 value="${mu2}"/> --> 
+            <mu2 value="${mu2}"/> 
         </gazebo>
     </xacro:macro>
 
-    <xacro:wheel prefix="front_left_wheel" x_reflect="1" y_reflect="1" mu1="0.0" mu2="0.0"/>
-    <xacro:wheel prefix="front_right_wheel" x_reflect="1" y_reflect="-1" mu1="0.0" mu2="0.0"/>
+    <xacro:wheel prefix="front_left_wheel" x_reflect="1" y_reflect="1" mu1="0.2" mu2="0.2"/>
+    <xacro:wheel prefix="front_right_wheel" x_reflect="1" y_reflect="-1" mu1="0.2" mu2="0.2"/>
     <xacro:wheel prefix="rear_left_wheel" x_reflect="-1" y_reflect="1" mu1="5.0" mu2="0.2"/>
     <xacro:wheel prefix="rear_right_wheel" x_reflect="-1" y_reflect="-1" mu1="5.0" mu2="0.2"/>
 
