@@ -37,7 +37,7 @@ ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', descri
 world = os.path.join(
     get_package_share_directory(package_name),
     'worlds',
-    'forest.world'
+    'industrial-warehouse.sdf'
 )
 gzserver_cmd = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
@@ -68,9 +68,9 @@ spawn_robot_cmd = IncludeLaunchDescription(
         os.path.join(get_package_share_directory(package_name), 'launch', 'spawn_robot.launch.py')
     ),
     launch_arguments={
-        'x_pose': LaunchConfiguration('x_pose', default='-8.0'),
-        'y_pose': LaunchConfiguration('y_pose', default='1.5'),
-        'z_pose': LaunchConfiguration('z_pose', default='0.18')
+        'x_pose': LaunchConfiguration('x_pose', default='0'),
+        'y_pose': LaunchConfiguration('y_pose', default='0'),
+        'z_pose': LaunchConfiguration('z_pose', default='0')
     }.items()
 )
 
@@ -131,13 +131,6 @@ launch_sim_ui = IncludeLaunchDescription(
     launch_arguments={'use_sim_time': use_sim_time}.items()
 )
 
-joystick_launch_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory(package_name), 'launch', 'joystick.launch.py')
-    ),
-    launch_arguments={'use_sim_time': use_sim_time}.items()
-)
-
 # Add all components into the LaunchDescription in the desired sequence.
 ld.add_action(gzserver_cmd)           # Start Gazebo simulation server.
 ld.add_action(rsp_cmd)                # Start the robot state publisher.
@@ -148,7 +141,6 @@ ld.add_action(ekf)                    # Run EKF for sensor fusion and localizati
 ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
 ld.add_action(nav)                    # Start navigation stack.
 ld.add_action(launch_sim_ui)          # Launch Gazebo UI
-ld.add_action(joystick_launch_cmd)    # Launch joystick interface
 
 def generate_launch_description():
     return ld
