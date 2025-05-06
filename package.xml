@@ -35,6 +35,7 @@
   <depend>robot_state_publisher</depend>
   <depend>joint_state_broadcaster</depend>
   <depend>diff_drive_controller</depend>
+  <depend>imu_sensor_broadcaster</depend>
   <depend>slam_toolbox</depend>
   <depend>robot_localization</depend>
   <depend>navigation2</depend>

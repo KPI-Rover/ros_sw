@@ -10,14 +10,15 @@ namespace kpi_rover_diff_drive_hw
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_init()");
         
         if (!info_.hardware_parameters.count("ecu_ip") ||
-            !info_.hardware_parameters.count("ecu_port")) {
+            !info_.hardware_parameters.count("ecu_port") ||
+            !info_.hardware_parameters.count("rpi_port")) {
             RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Missing ECU connection parameters");
             return hardware_interface::CallbackReturn::ERROR;
         }
 
         std::string ecu_ip = info_.hardware_parameters["ecu_ip"];
         int ecu_port = std::stoi(info_.hardware_parameters["ecu_port"]);
-        
+        int rpi_port = std::stoi(info_.hardware_parameters["rpi_port"]);
         // Read encoder ticks parameter
         if (info_.hardware_parameters.count("encoder_ticks_per_rev") > 0) {
             encoder_ticks_per_rev_ = std::stoi(info_.hardware_parameters.at("encoder_ticks_per_rev"));
@@ -29,9 +30,10 @@ namespace kpi_rover_diff_drive_hw
         auto transport = std::make_unique<kpi_rover::TCPTransport>(
             ecu_ip,
             ecu_port,
+            rpi_port,
             kpi_rover::DEFAULT_RECONNECT_INTERVAL_MS
         );
-        ecu_bridge_ = std::make_unique<kpi_rover::ECUBridge>(std::move(transport));
+        ecu_bridge_ = std::make_unique<kpi_rover::ECUBridgeMotors>(std::move(transport));
         
         // Set all initial values to zero
         memset(&hw_positions_, 0, sizeof(hw_positions_));
@@ -124,7 +126,7 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "write()");
         
-        // Use ECUBridge to set motor speeds
+        // Use ECUBridgeMotors to set motor speeds
         if (ecu_bridge_) {
             uint8_t result = ecu_bridge_->setAllMotorsSpeed(
                 convertToRPM100(hw_commands_[0]),

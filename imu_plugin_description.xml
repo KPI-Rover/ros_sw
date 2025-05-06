@@ -1,0 +1,9 @@
+<library path="kpi_rover_imu_hw">
+  <class name="kpi_rover_imu_hw/KPIRoverIMUHW" 
+    type="kpi_rover_imu_hw::KPIRoverIMUHW"
+    base_class_type="hardware_interface::SensorInterface">
+    <description>
+      Hardware interface for the KPI Rover IMU Broadcaster.
+    </description>
+  </class>
+</library>

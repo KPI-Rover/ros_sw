@@ -1,4 +1,4 @@
-#include "kpi_rover/ecu_bridge/ecu_bridge.hpp"
+#include "kpi_rover/ecu_bridge/ecu_bridge_motors.hpp"
 #include "kpi_rover/ecu_bridge/tcp_transport.hpp"
 #include <iostream>
 #include <cstdlib>
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     );
     
     // Create ECUBridge instance
-    kpi_rover::ECUBridge ecu_bridge(std::move(transport));
+    kpi_rover::ECUBridgeMotors ecu_bridge(std::move(transport));
     
     // Measure time for updateCash(1)
     double elapsed = measure_time([&]() {

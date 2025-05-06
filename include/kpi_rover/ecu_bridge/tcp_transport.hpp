@@ -9,7 +9,8 @@ class TCPTransport : public Transport {
 public:
     explicit TCPTransport(
         const std::string& host = "127.0.0.1",
-        uint16_t port = 6000,
+        uint16_t connection_port = 6000,
+        uint16_t bind_port = 9999,
         int reconnect_interval_ms = DEFAULT_RECONNECT_INTERVAL_MS);
     ~TCPTransport() override;
     bool connect() override;
@@ -18,7 +19,8 @@ public:
 
 private:
     std::string host_;
-    uint16_t port_;
+    uint16_t connection_port_;
+    uint16_t bind_port_;
     int reconnect_interval_ms_;
     int sockfd_;
 };

@@ -18,6 +18,7 @@
                 <plugin>kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW</plugin>
                 <param name="ecu_ip">$(arg ecu_ip)</param>
                 <param name="ecu_port">$(arg ecu_port)</param>
+                <param name="rpi_port">$(arg rpi_port)</param>
                 <param name="encoder_ticks_per_rev">4096</param>
             </hardware>
             <xacro:wheel_interface prefix="front_left_wheel" />
@@ -26,6 +27,27 @@
             <xacro:wheel_interface prefix="rear_right_wheel" />
         </ros2_control>
     </xacro:unless>
+
+    <xacro:unless value="$(arg sim_mode)">
+        <ros2_control name="KPIRoverIMUHW" type="sensor">
+            <hardware>
+                <plugin>kpi_rover_imu_hw/KPIRoverIMUHW</plugin>
+                <param name="rpi_port">$(arg rpi_port)</param>
+            </hardware>
+            <sensor name="imu">
+                <state_interface name="orientation.x" />
+                <state_interface name="orientation.y" />
+                <state_interface name="orientation.z" />
+                <state_interface name="angular_velocity.x" />
+                <state_interface name="angular_velocity.y" />
+                <state_interface name="angular_velocity.z" />
+                <state_interface name="linear_acceleration.x" />
+                <state_interface name="linear_acceleration.y" />
+                <state_interface name="linear_acceleration.z" />
+            </sensor>
+        </ros2_control>
+    </xacro:unless>
+
 
     <xacro:if value="$(arg sim_mode)">
         <ros2_control name="GazeboSystem" type="system">
