@@ -5,8 +5,8 @@
     <xacro:property name="tank_z_size" value="0.32" />
     <xacro:property name="tank_mass" value="100" />
     
-    <xacro:property name="cap_radius" value="0.1" />
-    <xacro:property name="cap_height" value="0.025" />
+    <xacro:property name="cap_radius" value="0.01" />
+    <xacro:property name="cap_height" value="0.0025" />
 
     <link name="water_tank_link">
         <visual>
