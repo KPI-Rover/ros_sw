@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
     <!-- base dimensions -->
-    <xacro:property name="base_x_size" value="1.0" />
-    <xacro:property name="base_y_size" value="0.65" />
-    <xacro:property name="base_z_size" value="0.1" />
+    <xacro:property name="base_x_size" value="0.24" />
+    <xacro:property name="base_y_size" value="0.18" />
+    <xacro:property name="base_z_size" value="0.01" />
 
     <!-- wheel properties -->
-    <xacro:property name="wheel_length" value="0.114" />
-    <xacro:property name="wheel_radius" value="0.183" />
+    <xacro:property name="wheel_length" value="0.04" />
+    <xacro:property name="wheel_radius" value="0.04" />
 
     <!-- material density -->
     <xacro:property name="base_density" value="1500.0" />
