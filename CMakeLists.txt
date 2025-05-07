@@ -172,7 +172,7 @@ install(
 )
 
 install(
-  DIRECTORY config description executables launch params worlds maps
+  DIRECTORY config description executables launch params worlds maps scripts
   DESTINATION share/${PROJECT_NAME}
 )
 
@@ -195,13 +195,15 @@ install(
   INCLUDES DESTINATION include
 )
 
-install(PROGRAMS
-  scripts/yuv422_compressed_to_rgb8_converter.py
+install(
+  DIRECTORY  scripts/
   DESTINATION lib/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS
+  FILES_MATCHING PATTERN "*.py"
 )
 
 # Export package dependencies
-ament_export_dependencies(hardware_interface pluginlib rclcpp rclcpp_lifecycle)
+ament_export_dependencies(hardware_interface pluginlib rclcpp rclpy rclcpp_lifecycle)
 ament_export_include_directories(include)
 ament_export_libraries(kpi_rover_imu_hw)
 ament_export_libraries(ecu_bridge_motors)
