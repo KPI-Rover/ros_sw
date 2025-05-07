@@ -7,6 +7,10 @@
 
 namespace kpi_rover
 {
+    inline void close_socket_if_opened(int sockfd) {
+        if (sockfd != -1)
+            close(sockfd);
+    }
 
     TCPTransport::TCPTransport(const std::string& host, uint16_t port, int reconnect_interval_ms)
         : host_(host)
@@ -18,12 +22,13 @@ namespace kpi_rover
 
     TCPTransport::~TCPTransport()
     {
-        if (sockfd_ != -1)
-            close(sockfd_);
+        close_socket_if_opened(sockfd_);
     }
 
     bool TCPTransport::connect()
     {
+        close_socket_if_opened(sockfd_);
+    
         sockfd_ = ::socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd_ < 0)
             return false;
