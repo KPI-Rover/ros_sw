@@ -100,12 +100,12 @@ namespace kpi_rover_diff_drive_hw
         // Convert encoder values to radians and angular velocity
         for (size_t i = 0; i < 4; ++i) {
             // Convert encoder ticks to radians
-            double position_rad = (2.0 * M_PI * encoder_values[i]) / encoder_ticks_per_rev_;
+            double position_diff_rad = (2.0 * M_PI * encoder_values[i] * -1) / encoder_ticks_per_rev_;
             
             // Calculate velocity (rad/s) using position difference and period
-            double velocity_rad_s = (position_rad - hw_positions_[i]) / period.seconds();
+            double velocity_rad_s = position_diff_rad / period.seconds();
             
-            hw_positions_[i] = position_rad;
+            hw_positions_[i] += position_diff_rad;
             hw_velocities_[i] = velocity_rad_s;
         }
 
@@ -160,14 +160,14 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "export_state_interfaces()");
         std::vector<hardware_interface::StateInterface> state_interfaces;
-        state_interfaces.push_back(hardware_interface::StateInterface("front_left_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[0]));
-        state_interfaces.push_back(hardware_interface::StateInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[0]));
-        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[1]));
-        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]));
-        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[2]));
-        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]));
-        state_interfaces.push_back(hardware_interface::StateInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[3]));
-        state_interfaces.push_back(hardware_interface::StateInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[3]));
+        state_interfaces.push_back(hardware_interface::StateInterface("front_left_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[3]));
+        state_interfaces.push_back(hardware_interface::StateInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[3]));
+        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[2]));
+        state_interfaces.push_back(hardware_interface::StateInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]));
+        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[0]));
+        state_interfaces.push_back(hardware_interface::StateInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[0]));
+        state_interfaces.push_back(hardware_interface::StateInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[1]));
+        state_interfaces.push_back(hardware_interface::StateInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]));
         return state_interfaces;
     }
 
@@ -175,10 +175,10 @@ namespace kpi_rover_diff_drive_hw
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "export_command_interfaces()");
         std::vector<hardware_interface::CommandInterface> command_interfaces;
-        command_interfaces.push_back(hardware_interface::CommandInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[0]));
-        command_interfaces.push_back(hardware_interface::CommandInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]));
-        command_interfaces.push_back(hardware_interface::CommandInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]));
-        command_interfaces.push_back(hardware_interface::CommandInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[0]));
+        command_interfaces.push_back(hardware_interface::CommandInterface("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]));
         return command_interfaces;
     }
 }  // namespace kpi_rover_diff_drive_hw
