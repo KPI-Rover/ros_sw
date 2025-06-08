@@ -50,7 +50,7 @@ private:
   }
 
   int32_t encoder_ticks_per_rev_{4096};  // Default value, will be overridden by parameter
-
+  double wheel_radius_{0.04};
 };
 }  // namespace kpi_rover_diff_drive_hw
 
