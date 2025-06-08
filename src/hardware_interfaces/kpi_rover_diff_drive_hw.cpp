@@ -26,6 +26,12 @@ namespace kpi_rover_diff_drive_hw
                         "Using encoder ticks per revolution: %d", encoder_ticks_per_rev_);
         }
 
+        if (info_.hardware_parameters.count("wheel_radius") > 0) {
+            wheel_radius_ = std::stod(info_.hardware_parameters.at("wheel_radius"));
+            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), 
+                        "Using wheel radius: %f", wheel_radius_);
+        }
+
         // Create transport with parameters from config
         auto transport = std::make_unique<kpi_rover::TCPTransport>(
             ecu_ip,
@@ -104,9 +110,9 @@ namespace kpi_rover_diff_drive_hw
             
             // Calculate velocity (rad/s) using position difference and period
             double velocity_rad_s = position_diff_rad / period.seconds();
-            
+            double velocity_m_s = velocity_rad_s * wheel_radius_;
             hw_positions_[i] += position_diff_rad;
-            hw_velocities_[i] = velocity_rad_s;
+            hw_velocities_[i] = velocity_m_s;
         }
 
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),
@@ -129,10 +135,10 @@ namespace kpi_rover_diff_drive_hw
         // Use ECUBridgeMotors to set motor speeds
         if (ecu_bridge_) {
             uint8_t result = ecu_bridge_->setAllMotorsSpeed(
-                convertToRPM100(hw_commands_[0]),
-                convertToRPM100(hw_commands_[1]),
-                convertToRPM100(hw_commands_[2]),
-                convertToRPM100(hw_commands_[3])
+                convertToRPM100(hw_commands_[0] * -1),
+                convertToRPM100(hw_commands_[1] * -1),
+                convertToRPM100(hw_commands_[2] * -1),
+                convertToRPM100(hw_commands_[3] * -1)
             );
             
             if (result != 0) {
