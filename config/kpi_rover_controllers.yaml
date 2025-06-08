@@ -1,7 +1,7 @@
 controller_manager:
   ros__parameters:
   # TODO Return back normal rate. It was decrised for debugging
-    update_rate: 50 
+    update_rate: 30 
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -19,6 +19,8 @@ diff_drive_controller:
 
     wheel_separation: 0.22
     wheel_radius: 0.04
+    wheel_separation_multiplier: 1.5
+    wheel_radius_multiplier: 1.0  
 
     publish_rate: 50.0
     # odom_frame_id: odom
@@ -26,8 +28,9 @@ diff_drive_controller:
     publish_wheel_tf: true
     publish_cmd: true 
     enable_odom_tf: false
+    position_feedback: true
     linear:
-      x: {min_velocity: -10.0, max_velocity: 10.0}
+      x: {min_velocity: -1.0, max_velocity: 1.0}
 
 imu_broadcaster:
   ros__parameters:
