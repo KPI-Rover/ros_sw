@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <cstring>
+#include "rclcpp/logging.hpp"
 
 namespace kpi_rover
 {
@@ -31,9 +32,10 @@ namespace kpi_rover
         close_socket_if_opened(sockfd_);
     
         sockfd_ = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd_ < 0)
+        if (sockfd_ < 0) {
+            RCLCPP_ERROR(rclcpp::get_logger("TCPTransport"), "Cannot create socket");
             return false;
-
+        }
         sockaddr_in serv_addr{};
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(connection_port_);
