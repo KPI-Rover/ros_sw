@@ -107,8 +107,15 @@ namespace kpi_rover
             newIMUData_cv_.wait_for(lck, std::chrono::milliseconds(timeout_ms), [this] {
                 return IMUDataUpdated_;
             });
+            if (IMUDataUpdated_){
+                IMUDataUpdated_ = false;
+            } else {
+                memcpy(&data, &latestIMUData_, sizeof(ORIENT_SIZE));
+                memset(&data+ORIENT_SIZE, 0, sizeof(latestIMUData_)-ORIENT_SIZE);
+                return true;
+            }
             
-            IMUDataUpdated_ = false;
+            
         }
         
         memcpy(&data, &latestIMUData_, sizeof(IMUData));
