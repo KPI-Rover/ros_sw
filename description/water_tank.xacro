@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">     
-    <xacro:property name="tank_x_size" value="0.6" />
-    <xacro:property name="tank_y_size" value="0.6" />
-    <xacro:property name="tank_z_size" value="0.32" />
-    <xacro:property name="tank_mass" value="100" />
+    <xacro:property name="tank_x_size" value="0.15" />
+    <xacro:property name="tank_y_size" value="0.15" />
+    <xacro:property name="tank_z_size" value="0.1" />
+    <xacro:property name="tank_mass" value="1.5" />
     
     <xacro:property name="cap_radius" value="0.01" />
     <xacro:property name="cap_height" value="0.0025" />
