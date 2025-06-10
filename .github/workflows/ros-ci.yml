@@ -1,0 +1,26 @@
+name: ROS 2 CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:noble
+    steps:
+      # Checkout repository
+      #- name: Checkout code
+      #  uses: actions/checkout@v3
+    - uses: ros-tooling/setup-ros@v0.7
+      with:
+        required-ros-distributions: jazzy
+    - uses: ros-tooling/action-ros-ci@v0.3
+      with:
+        package-name: apricotka-robot-car
+        target-ros2-distro: jazzy
