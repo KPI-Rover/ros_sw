@@ -15,7 +15,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -94,6 +94,13 @@ slam_toolbox_map = IncludeLaunchDescription(
     }.items()
 )
 
+slam_toolbox_delayed = TimerAction(
+        period=2.0,  # Delay to give time for ros2 control to start
+        actions=[
+            slam_toolbox_map,
+        ]
+    )
+
 # Launch the navigation stack.
 # Provides path planning and obstacle avoidance for autonomous robot movement.
 nav = IncludeLaunchDescription(
@@ -122,7 +129,7 @@ camera = Node(
 ld.add_action(motors_control)         # Start all nodes for motors control.
 ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
 ld.add_action(lidar)                  # Run lidar node
-ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
+ld.add_action(slam_toolbox_delayed)   # Run SLAM toolkit for mapping.
 ld.add_action(nav)                    # Start navigation stack.
 ld.add_action(camera)                 # Start publishing images from camera.
 def generate_launch_description():
