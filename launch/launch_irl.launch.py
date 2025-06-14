@@ -125,6 +125,16 @@ camera = Node(
 )
 
 # Add all components into the LaunchDescription in the desired sequence.
+explore = IncludeLaunchDescription(
+             PythonLaunchDescriptionSource(
+                os.path.join(get_package_share_directory('explore_lite'), 'launch', 'explore.launch.py')
+             ),
+             launch_arguments={
+                'use_sim_time': use_sim_time,
+                "/map": "/global_costmap/costmap", 
+                "/map_updates": "/global_costmap/costmap_updates",
+            }.items()
+         )   
 
 ld.add_action(motors_control)         # Start all nodes for motors control.
 ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
@@ -132,5 +142,6 @@ ld.add_action(lidar)                  # Run lidar node
 ld.add_action(slam_toolbox_delayed)   # Run SLAM toolkit for mapping.
 ld.add_action(nav)                    # Start navigation stack.
 ld.add_action(camera)                 # Start publishing images from camera.
+ld.add_action(explore) 
 def generate_launch_description():
     return ld
