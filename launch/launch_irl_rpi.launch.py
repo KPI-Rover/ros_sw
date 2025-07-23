@@ -28,11 +28,13 @@ ecu_ip = LaunchConfiguration('ecu_ip')
 ecu_port = LaunchConfiguration('ecu_port')
 udp_port = LaunchConfiguration('udp_port')
 
+log_level = LaunchConfiguration('log_level', default='info')
+
 package_name = 'kpi_rover'
 
 ld = LaunchDescription()
 ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='false', description='Use simulation (Gazebo) clock if true'))
-ld = LaunchDescription([
+ld.add_action(LaunchDescription([
         DeclareLaunchArgument(
             'ecu_ip',
             default_value='10.30.30.30',
@@ -49,12 +51,24 @@ ld = LaunchDescription([
             description='Port number of the UDP server to listen for IMU data from ECU'
         )
     ])
+)
+
+log_level_arg = DeclareLaunchArgument(
+    'log_level',
+    default_value='info',
+    description='Logging level (debug, info, warn, error, fatal)'
+)
+
+ld.add_action(log_level_arg)
 
 # Launch lidar node from cspc_lidar package
 lidar = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('cspc_lidar'), 'launch', 'lidar.launch.py')
-            )
+            ),
+            launch_arguments={
+                'log_level': log_level
+            }.items()
         )       
 # Launch ros2_control system for driving real motors
 motors_control =  IncludeLaunchDescription(
@@ -65,42 +79,9 @@ motors_control =  IncludeLaunchDescription(
         'use_sim_time': use_sim_time,
         'ecu_ip': ecu_ip,
         'ecu_port': ecu_port,
-        'udp_port': udp_port
+        'udp_port': udp_port,
+        'log_level': log_level,
     }.items()
-)
-
-# Launch the EKF node for sensor fusion and localization.
-# It fuses sensor data (e.g., IMU, odometry) to estimate the robot's pose.
-ekf = Node(
-    package='robot_localization',
-    executable='ekf_node',
-    name='ekf_filter_node',
-    output='screen',
-    parameters=[
-        os.path.join(get_package_share_directory(package_name), 'config', 'ekf.yaml'),
-        {'use_sim_time': use_sim_time},
-    ]
-)
-
-# Launch the SLAM toolbox for online asynchronous mapping.
-# It builds a map of the environment from sensor data.
-slam_toolbox_map = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')
-    ),
-    launch_arguments={
-        'slam_params_file': os.path.join(get_package_share_directory(package_name), 'config', 'slam_toolbox_mapping.yaml'),
-        'use_sim_time': use_sim_time
-    }.items()
-)
-
-# Launch the navigation stack.
-# Provides path planning and obstacle avoidance for autonomous robot movement.
-nav = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory(package_name), 'launch', 'navigation.launch.py')
-    ),
-    launch_arguments={'use_sim_time': use_sim_time}.items()
 )
 
 # Launch camera node.
@@ -113,6 +94,7 @@ camera = Node(
         'image_size': [320, 240],
         'video_device':"/dev/video0",
         'output_encoding': "yuv422_yuy2"}],
+    arguments=['--ros-args', '--log-level', log_level],
     remappings=[('/image_raw','/camera/image_raw')]
 
 )
@@ -120,10 +102,7 @@ camera = Node(
 # Add all components into the LaunchDescription in the desired sequence.
 
 ld.add_action(motors_control)         # Start all nodes for motors control.
-ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
 ld.add_action(lidar)                  # Run lidar node
-ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
-ld.add_action(nav)                    # Start navigation stack.
 ld.add_action(camera)                 # Start publishing images from camera.
 def generate_launch_description():
     return ld

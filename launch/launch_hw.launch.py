@@ -14,6 +14,8 @@ def generate_launch_description():
     ecu_port = LaunchConfiguration('ecu_port')
     rpi_port = LaunchConfiguration('rpi_port')
 
+    log_level = LaunchConfiguration('log_level', default='info')
+
     ld = LaunchDescription([
         DeclareLaunchArgument(
             'ecu_ip',
@@ -31,6 +33,14 @@ def generate_launch_description():
             description='Port number of the UDP server to listen for IMU data from ECU and TCP client to send motors commands and receive encoders data'
         )
     ])
+
+    log_level_arg = DeclareLaunchArgument(
+        'log_level',
+        default_value='info',
+        description='Logging level (debug, info, warn, error, fatal)'
+    )
+
+    ld.add_action(log_level_arg)
 
     # Package paths
     package_name = 'kpi_rover'
@@ -59,6 +69,7 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{'robot_description': robot_description}],
+        arguments=['--ros-args', '--log-level', log_level],
         output='screen'
     ))
 
@@ -73,6 +84,7 @@ def generate_launch_description():
             {'ecu_port': ecu_port},
             {'rpi_port': rpi_port}
         ],
+        arguments=['--ros-args', '--log-level', log_level],
         output='screen'
     )
     ld.add_action(controller_manager)
@@ -84,19 +96,19 @@ def generate_launch_description():
             Node(
                 package='controller_manager',
                 executable='spawner',
-                arguments=['joint_state_broadcaster'],
+                arguments=['joint_state_broadcaster', '--ros-args', '--log-level', log_level],
                 output='screen'
             ),
             Node(
                 package='controller_manager',
                 executable='spawner',
-                arguments=['diff_drive_controller'],
+                arguments=['diff_drive_controller', '--ros-args', '--log-level', log_level],
                 output='screen'
             ),
             Node(
                 package="controller_manager",
                 executable="spawner",
-                arguments=["imu_broadcaster"],
+                arguments=["imu_broadcaster", '--ros-args', '--log-level', log_level],
             )   
         ]
     )

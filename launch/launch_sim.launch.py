@@ -26,11 +26,21 @@ from launch_ros.actions import Node
 # Define the common simulation clock parameter
 use_sim_time = LaunchConfiguration('use_sim_time', default='true')
 
+log_level = LaunchConfiguration('log_level', default='info')
+
 package_name = 'kpi_rover'
 ros_gz_sim = get_package_share_directory('ros_gz_sim')
 
 ld = LaunchDescription()
 ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'))
+
+log_level_arg = DeclareLaunchArgument(
+    'log_level',
+    default_value='info',
+    description='Logging level (debug, info, warn, error, fatal)'
+)
+
+ld.add_action(log_level_arg)
 
 # Launch Gazebo simulation server with the specified world file.
 # This starts the simulation environment.
@@ -45,7 +55,8 @@ gzserver_cmd = IncludeLaunchDescription(
     ),
     launch_arguments={
         'gz_args': ['-r -s -v4 ', world],
-        'on_exit_shutdown': 'true'
+        'on_exit_shutdown': 'true',
+        'log_level': log_level,
     }.items()
 )
 
@@ -57,7 +68,8 @@ rsp_cmd = IncludeLaunchDescription(
     ),
     launch_arguments={
         'use_sim_time': use_sim_time,
-        'use_ros2_control': 'true'
+        'use_ros2_control': 'true',
+        'log_level': log_level,
     }.items()
 )
 
@@ -70,21 +82,22 @@ spawn_robot_cmd = IncludeLaunchDescription(
     launch_arguments={
         'x_pose': LaunchConfiguration('x_pose', default='0'),
         'y_pose': LaunchConfiguration('y_pose', default='0'),
-        'z_pose': LaunchConfiguration('z_pose', default='0')
+        'z_pose': LaunchConfiguration('z_pose', default='0'),
+        'log_level': log_level,
     }.items()
 )
 
 # Load the Joint State Broadcaster controller.
 # This controller publishes the joint states necessary for robot control.
 load_joint_state_broadcaster = ExecuteProcess(
-    cmd=['ros2', 'control', 'load_controller', '--set-state', 'active', 'joint_state_broadcaster'],
+    cmd=['ros2', 'control', 'load_controller', '--set-state', 'active', 'joint_state_broadcaster', '--ros-args', '--log-level', log_level],
     output='screen'
 )
 
 # Load the Differential Drive controller.
 # This controller converts velocity commands into motor commands for robot maneuvering.
 load_diff_drive_controller = ExecuteProcess(
-    cmd=['ros2', 'control', 'load_controller', '--set-state', 'active', 'diff_drive_controller'],
+    cmd=['ros2', 'control', 'load_controller', '--set-state', 'active', 'diff_drive_controller', '--ros-args', '--log-level', log_level],
     output='screen'
 )
 
@@ -98,7 +111,8 @@ ekf = Node(
     parameters=[
         os.path.join(get_package_share_directory(package_name), 'config', 'ekf.yaml'),
         {'use_sim_time': use_sim_time},
-    ]
+    ],
+    arguments=['--ros-args', '--log-level', log_level]
 )
 
 # Launch the SLAM toolbox for online asynchronous mapping.
@@ -109,7 +123,8 @@ slam_toolbox_map = IncludeLaunchDescription(
     ),
     launch_arguments={
         'slam_params_file': os.path.join(get_package_share_directory(package_name), 'config', 'slam_toolbox_mapping.yaml'),
-        'use_sim_time': use_sim_time
+        'use_sim_time': use_sim_time,
+        'log_level': log_level,
     }.items()
 )
 
@@ -119,7 +134,10 @@ nav = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
         os.path.join(get_package_share_directory(package_name), 'launch', 'navigation.launch.py')
     ),
-    launch_arguments={'use_sim_time': use_sim_time}.items()
+    launch_arguments={
+        'use_sim_time': use_sim_time,
+        'log_level': log_level,
+    }.items()
 )
 
 # Include the Gazebo UI .
@@ -128,7 +146,10 @@ launch_sim_ui = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
         os.path.join(get_package_share_directory(package_name), 'launch', 'launch_sim_ui.launch.py')
     ),
-    launch_arguments={'use_sim_time': use_sim_time}.items()
+    launch_arguments={
+        'use_sim_time': use_sim_time,
+        'log_level': log_level,
+    }.items()
 )
 
 # Add all components into the LaunchDescription in the desired sequence.
