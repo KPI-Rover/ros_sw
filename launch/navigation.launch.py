@@ -16,6 +16,14 @@ def generate_launch_description():
         description='Flag to enable use_sim_time'
     )
 
+    log_level = LaunchConfiguration('log_level', default='info')
+
+    log_level_arg = DeclareLaunchArgument(
+        'log_level',
+        default_value='info',
+        description='Logging level (debug, info, warn, error, fatal)'
+    )
+
     nav2_navigation_launch_path = os.path.join(
         get_package_share_directory('nav2_bringup'),
         'launch',
@@ -34,6 +42,7 @@ def generate_launch_description():
         launch_arguments={
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
                 'params_file': navigation_params_path,
+                'log_level': log_level,
         }.items()
     )
 
@@ -41,6 +50,7 @@ def generate_launch_description():
         package='twist_stamper',
         executable='twist_stamper',
         parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
+        arguments=['--ros-args', '--log-level', log_level],
         remappings=[('/cmd_vel_in','/cmd_vel_unstamped'),
                        ('/cmd_vel_out','/diff_drive_controller/cmd_vel')]
     )
@@ -49,6 +59,7 @@ def generate_launch_description():
     launchDescriptionObject = LaunchDescription()
 
     launchDescriptionObject.add_action(sim_time_arg)
+    launchDescriptionObject.add_action(log_level_arg)
     launchDescriptionObject.add_action(navigation_launch)
     launchDescriptionObject.add_action(twist_stamper)
 
