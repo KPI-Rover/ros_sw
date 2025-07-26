@@ -200,6 +200,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  scripts/object_detector/object_detector.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Export package dependencies
 ament_export_dependencies(hardware_interface pluginlib rclcpp rclcpp_lifecycle)
 ament_export_include_directories(include)
