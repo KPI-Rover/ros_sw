@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+  <material name="red">
+    <color rgba="1 0 0 1"/>
+  </material>
+
+  <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="${base_x_size/2} 0 ${base_z_size}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_link">
+      <visual>
+          <geometry>
+              <box size="0.010 0.03 0.03"/>
+          </geometry>
+          <material name="red"/>
+      </visual>
+  </link>
+
+  <joint name="camera_rgb_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_rgb_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+  </joint>
+
+  <link name="camera_rgb_frame"></link>
+
+ <gazebo reference="camera_link">
+      <material name="gazebo_red"/>
+
+    <sensor name="right" type="camera">
+        <pose>0 -0.12 0 0 0 0</pose>
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>10</update_rate>
+        <topic>stereo_camera/right/image_raw</topic>
+        <gz_frame_id>camera_rgb_frame</gz_frame_id>
+        <camera name="intel_realsense_r200">
+          <camera_info_topic>stereo_camera/right/camera_info</camera_info_topic>
+          <horizontal_fov>1.02974</horizontal_fov>
+          <image>
+            <width>1920</width>
+            <height>1080</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.02</near>
+            <far>300</far>
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+    </sensor>
+        <sensor name="left" type="camera">
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>10</update_rate>
+        <topic>stereo_camera/left/image_raw</topic>
+        <gz_frame_id>camera_rgb_frame</gz_frame_id>
+        <camera name="intel_realsense_r200">
+          <camera_info_topic>stereo_camera/left/camera_info</camera_info_topic>
+          <horizontal_fov>1.02974</horizontal_fov>
+          <image>
+            <width>1920</width>
+            <height>1080</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.02</near>
+            <far>300</far>
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+    </sensor>
+</gazebo>
+
+</robot>
