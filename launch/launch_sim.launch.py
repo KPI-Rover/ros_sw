@@ -113,6 +113,16 @@ slam_toolbox_map = IncludeLaunchDescription(
     }.items()
 )
 
+stereo_image_proc = IncludeLaunchDescription(
+    PythonLaunchDescriptionSource(
+        os.path.join(get_package_share_directory('stereo_image_proc'), 'launch', 'stereo_image_proc.launch.py')
+    ),
+    launch_arguments={
+        'namespace': 'stereo_camera',
+        'use_sim_time': use_sim_time
+    }.items()
+)
+
 # Launch the navigation stack.
 # Provides path planning and obstacle avoidance for autonomous robot movement.
 nav = IncludeLaunchDescription(
@@ -137,9 +147,10 @@ ld.add_action(rsp_cmd)                # Start the robot state publisher.
 ld.add_action(spawn_robot_cmd)        # Spawn the robot into the simulation.
 ld.add_action(load_joint_state_broadcaster)  # Load joint state controller.
 ld.add_action(load_diff_drive_controller)    # Load differential drive controller.
-ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
-ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
-ld.add_action(nav)                    # Start navigation stack.
+ld.add_action(stereo_image_proc)
+# ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
+# ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
+# ld.add_action(nav)                    # Start navigation stack.
 ld.add_action(launch_sim_ui)          # Launch Gazebo UI
 
 def generate_launch_description():

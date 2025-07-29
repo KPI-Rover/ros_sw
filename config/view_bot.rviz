@@ -12,6 +12,7 @@ Panels:
         - /Map1
         - /Map2
         - /Image1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 334
   - Class: rviz_common/Selection
@@ -78,10 +79,6 @@ Visualization Manager:
           Value: true
         laser_frame:
           Value: true
-        map:
-          Value: true
-        odom:
-          Value: true
         rear_left_wheel_link:
           Value: true
         rear_right_wheel_link:
@@ -96,30 +93,28 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        map:
-          odom:
-            base_footprint:
-              base_link:
-                camera_link:
-                  camera_rgb_frame:
-                    {}
-                chassis:
-                  {}
-                front_left_wheel_link:
-                  {}
-                front_right_wheel_link:
-                  {}
-                imu_link:
-                  {}
-                rear_left_wheel_link:
-                  {}
-                rear_right_wheel_link:
-                  {}
-                water_tank_link:
-                  laser_frame:
-                    {}
-                  water_cap_link:
-                    {}
+        base_footprint:
+          base_link:
+            camera_link:
+              camera_rgb_frame:
+                {}
+            chassis:
+              {}
+            front_left_wheel_link:
+              {}
+            front_right_wheel_link:
+              {}
+            imu_link:
+              {}
+            rear_left_wheel_link:
+              {}
+            rear_right_wheel_link:
+              {}
+            water_tank_link:
+              laser_frame:
+                {}
+              water_cap_link:
+                {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -303,10 +298,43 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /stereo_camera/left/image_raw
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /stereo_camera/points2
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: map
+    Fixed Frame: base_footprint
     Frame Rate: 30
   Name: root
   Tools:
@@ -349,7 +377,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 16.436065673828125
+      Distance: 6.477507591247559
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -364,10 +392,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6697986125946045
+      Pitch: 0.41979873180389404
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.38356614112854
+      Yaw: 3.273568630218506
     Saved: ~
 Window Geometry:
   Displays:
@@ -387,5 +415,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1534
-  X: 66
+  X: 265
   Y: 32

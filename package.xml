@@ -51,6 +51,9 @@
   <depend>image_transport</depend>
   <depend>std_msgs</depend>
   <depend>compressed_image_transport</depend>
+
+  <depend>image_view</depend>
+  <depend>stereo_image_proc</depend>
     
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

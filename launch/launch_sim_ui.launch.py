@@ -44,11 +44,25 @@ rviz = Node(
     output='screen'
 )
 
+stereo_image_view = Node(
+    package='image_view',
+    executable='stereo_view',
+    name='stereo_image_view',
+    output='screen',
+    parameters=[{
+        'stereo':'/stereo_camera',
+        'image': 'image_rect_color',
+        'use_sim_time': use_sim_time
+        },
+    ]
+)
+
 # Create and populate the LaunchDescription.
 ld = LaunchDescription()
 ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'))
 ld.add_action(gzclient_cmd)
 ld.add_action(rviz)
+ld.add_action(stereo_image_view)
 
 def generate_launch_description():
     return ld
