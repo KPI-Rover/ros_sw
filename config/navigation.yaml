@@ -60,7 +60,7 @@ controller_server:
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
-      min_vel_x: 0.0
+      min_vel_x: -10.0
       min_vel_y: 0.0
       max_vel_x: 10.0
       max_vel_y: 0.0
@@ -113,7 +113,7 @@ controller_server:
       vy_std: 0.2
       wz_std: 0.4
       vx_max: 0.5
-      vx_min: -0.35
+      vx_min: -0.5
       vy_max: 0.5
       wz_max: 1.9
       iteration_count: 1
@@ -156,9 +156,9 @@ controller_server:
         enabled: true
         cost_power: 1
         cost_weight: 3.81
-        critical_cost: 300.0
+        critical_cost: 50.0
         consider_footprint: true
-        collision_cost: 1000000.0
+        collision_cost: 1000.0
         near_goal_distance: 1.0
         trajectory_point_step: 2
       PathAlignCritic:
@@ -204,8 +204,8 @@ local_costmap:
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.2
+        cost_scaling_factor: 0.5
+        inflation_radius: 0.4
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -224,7 +224,7 @@ local_costmap:
           data_type: "LaserScan"
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
+          obstacle_max_range: 3.0
           obstacle_min_range: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -256,14 +256,14 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
-      lethal_cost_threshold: 100
+      lethal_cost_threshold: 50
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.2
+        cost_scaling_factor: 0.5
+        inflation_radius: 0.4
       always_send_full_costmap: True
 
 
@@ -274,11 +274,14 @@ planner_server:
     costmap_update_timeout: 1.0
     GridBased:
       plugin: "nav2_smac_planner::SmacPlannerHybrid"
-      minimum_turning_radius: 0.4        # minimum turning radius in m of path / vehicle
+      minimum_turning_radius: 0.0        # minimum turning radius in m of path / vehicle
       reverse_penalty: 0.0
       motion_model_for_search: "REEDS_SHEPP"
       analytic_expansion_max_length: 10.0
-      analytic_expansion_max_cost: 100.0
+      analytic_expansion_max_cost: 20.0
+      cost_penalty: 100.0
+      allow_unknown: false
+
 
 
 smoother_server:
@@ -333,8 +336,8 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [0.5, 0.0, 5.0]
-    min_velocity: [-0.5, 0.0, -2.0]
+    max_velocity: [10.0, 0.0, 5.0]
+    min_velocity: [-10.0, 0.0, -2.0]
     max_accel: [2.5, 0.0, 3.2]
     max_decel: [-2.5, 0.0, -3.2]
     odom_topic: "odometry/filtered"
