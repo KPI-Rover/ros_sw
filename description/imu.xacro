@@ -13,6 +13,9 @@
             <always_on>1</always_on>
             <visualize>false</visualize>
             <topic>/imu_broadcaster/imu</topic>
+            <gz_frame_id>imu_link</gz_frame_id>
+            <gaussian_noise>0.01</gaussian_noise>
+            <update_rate>100.0</update_rate>
         </sensor>
     </gazebo>
 </robot>
