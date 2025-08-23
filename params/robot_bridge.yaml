@@ -1,6 +1,6 @@
 # gz topic published by IMU plugin
-- ros_topic_name: "imu"
-  gz_topic_name: "imu"
+- ros_topic_name: "imu_broadcaster/imu"
+  gz_topic_name: "imu_broadcaster/imu"
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
   direction: GZ_TO_ROS
