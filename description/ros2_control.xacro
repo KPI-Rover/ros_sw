@@ -18,6 +18,7 @@
                 <plugin>kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW</plugin>
                 <param name="ecu_ip">$(arg ecu_ip)</param>
                 <param name="ecu_port">$(arg ecu_port)</param>
+                <param name="rpi_port">$(arg rpi_port)</param>
                 <param name="encoder_ticks_per_rev">821</param>
                 <param name="wheel_radius">0.04</param>
             </hardware>
