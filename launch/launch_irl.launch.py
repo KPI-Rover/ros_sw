@@ -26,7 +26,7 @@ use_sim_time = LaunchConfiguration('use_sim_time', default='false')
 # Define parameters for launch_hw
 ecu_ip = LaunchConfiguration('ecu_ip')
 ecu_port = LaunchConfiguration('ecu_port')
-udp_port = LaunchConfiguration('udp_port')
+rpi_port = LaunchConfiguration('rpi_port')
 
 package_name = 'kpi_rover'
 
@@ -44,7 +44,7 @@ ld = LaunchDescription([
             description='Port number of the ECU'
         ),
         DeclareLaunchArgument(
-            'udp_port',
+            'rpi_port',
             default_value='9999',
             description='Port number of the UDP server to listen for IMU data from ECU'
         )
@@ -65,7 +65,8 @@ motors_control =  IncludeLaunchDescription(
         'use_sim_time': use_sim_time,
         'ecu_ip': ecu_ip,
         'ecu_port': ecu_port,
-        'udp_port': udp_port
+        'rpi_port': rpi_port,
+        'log_level': log_level,
     }.items()
 )
 
