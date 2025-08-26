@@ -96,6 +96,10 @@ namespace kpi_rover_imu_hw
         return hardware_interface::return_type::ERROR;
     }
 
+    //Convert angular velocity from deg/s to rad/s
+    imu_data_.ang_vel[0] = imu_data_.ang_vel[0] * 180 / M_PI;
+    imu_data_.ang_vel[1] = imu_data_.ang_vel[1] * 180 / M_PI;
+    imu_data_.ang_vel[2] = imu_data_.ang_vel[2] * 180 / M_PI;
 
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), \
                 "[%ld]IMU Data:\n\t \
