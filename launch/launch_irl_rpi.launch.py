@@ -85,19 +85,14 @@ motors_control =  IncludeLaunchDescription(
 )
 
 # Launch camera node.
-camera = Node(
-    package='v4l2_camera',
-    executable='v4l2_camera_node',
-    name='camera_node',
-    output='screen',
-    parameters= [{
-        'image_size': [320, 240],
-        'video_device':"/dev/video0",
-        'output_encoding': "yuv422_yuy2"}],
-    arguments=['--ros-args', '--log-level', log_level],
-    remappings=[('/image_raw','/camera/image_raw')]
-
-)
+camera = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(get_package_share_directory(package_name), 'launch', 'camera.launch.py')
+            ),
+            launch_arguments={
+                'log_level': log_level
+            }.items()
+        )   
 
 # Add all components into the LaunchDescription in the desired sequence.
 
