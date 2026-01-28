@@ -1,0 +1,9 @@
+<library path="kpi_rover_system_hw">
+  <class name="kpi_rover_system_hw/KPIRoverSystemHW"
+         type="kpi_rover_system_hw::KPIRoverSystemHW"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      The KPI Rover system hardware interface.
+    </description>
+  </class>
+</library>

@@ -10,25 +10,19 @@ def generate_launch_description():
     # Declare launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     sim_mode = LaunchConfiguration('sim_mode', default='false')
-    ecu_ip = LaunchConfiguration('ecu_ip')
-    ecu_port = LaunchConfiguration('ecu_port')
-    rpi_port = LaunchConfiguration('rpi_port')
+    serial_device = LaunchConfiguration('serial_device')
+    baud_rate = LaunchConfiguration('baud_rate')
 
     ld = LaunchDescription([
         DeclareLaunchArgument(
-            'ecu_ip',
-            default_value='10.30.30.30',
-            description='IP address of the ECU'
+            'serial_device',
+            default_value='/dev/ttyAMA2',
+            description='Serial device for ECU communication'
         ),
         DeclareLaunchArgument(
-            'ecu_port',
-            default_value='6000',
-            description='Port number of the ECU'
-        ),
-        DeclareLaunchArgument(
-            'rpi_port',
-            default_value='9999',
-            description='Port number of the UDP server to listen for IMU data from ECU and TCP client to send motors commands and receive encoders data'
+            'baud_rate',
+            default_value='921600',
+            description='Baud rate for serial communication'
         )
     ])
 
@@ -42,9 +36,8 @@ def generate_launch_description():
         'xacro ', urdf_file,
         ' use_sim_time:=', use_sim_time,
         ' sim_mode:=', sim_mode,
-        ' ecu_ip:=', ecu_ip,
-        ' ecu_port:=', ecu_port,
-        ' rpi_port:=', rpi_port
+        ' serial_device:=', serial_device,
+        ' baud_rate:=', baud_rate
     ])
 
     # Controller configuration
@@ -69,9 +62,8 @@ def generate_launch_description():
         parameters=[
             {'robot_description': robot_description},
             controllers_config,
-            {'ecu_ip': ecu_ip},
-            {'ecu_port': ecu_port},
-            {'rpi_port': rpi_port}
+            {'serial_device': serial_device},
+            {'baud_rate': baud_rate}
         ],
         output='screen'
     )
