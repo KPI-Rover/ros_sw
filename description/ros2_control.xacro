@@ -13,12 +13,11 @@
     </xacro:macro>
     
     <xacro:unless value="$(arg sim_mode)">
-        <ros2_control name="KPIRoverDiffDriveHW" type="system">
+        <ros2_control name="KPIRoverSystemHW" type="system">
             <hardware>
-                <plugin>kpi_rover_diff_drive_hw/KPIRoverDiffDriveHW</plugin>
-                <param name="ecu_ip">$(arg ecu_ip)</param>
-                <param name="ecu_port">$(arg ecu_port)</param>
-                <param name="rpi_port">$(arg rpi_port)</param>
+                <plugin>kpi_rover_system_hw/KPIRoverSystemHW</plugin>
+                <param name="serial_device">$(arg serial_device)</param>
+                <param name="baud_rate">$(arg baud_rate)</param>
                 <param name="encoder_ticks_per_rev">821</param>
                 <param name="wheel_radius">0.04</param>
             </hardware>
@@ -26,19 +25,11 @@
             <xacro:wheel_interface prefix="front_right_wheel" />
             <xacro:wheel_interface prefix="rear_left_wheel" />
             <xacro:wheel_interface prefix="rear_right_wheel" />
-        </ros2_control>
-    </xacro:unless>
-
-    <xacro:unless value="$(arg sim_mode)">
-        <ros2_control name="KPIRoverIMUHW" type="sensor">
-            <hardware>
-                <plugin>kpi_rover_imu_hw/KPIRoverIMUHW</plugin>
-                <param name="rpi_port">$(arg rpi_port)</param>
-            </hardware>
             <sensor name="imu">
                 <state_interface name="orientation.x" />
                 <state_interface name="orientation.y" />
                 <state_interface name="orientation.z" />
+                <state_interface name="orientation.w" />
                 <state_interface name="angular_velocity.x" />
                 <state_interface name="angular_velocity.y" />
                 <state_interface name="angular_velocity.z" />

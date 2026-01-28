@@ -2,8 +2,8 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robot">
 
     <xacro:arg name="sim_mode" default="true"/>
-    <xacro:arg name="ecu_ip" default="10.30.30.30"/>
-    <xacro:arg name="ecu_port" default="6000"/>
+    <xacro:arg name="serial_device" default="/dev/ttyAMA2"/>
+    <xacro:arg name="baud_rate" default="921600"/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />
