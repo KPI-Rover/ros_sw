@@ -1,0 +1,38 @@
+controller_manager:
+  ros__parameters:
+  # TODO Return back normal rate. It was decrised for debugging
+    update_rate: 30 
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    diff_drive_controller:
+      type: diff_drive_controller/DiffDriveController
+
+    imu_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+diff_drive_controller:
+  ros__parameters:
+    left_wheel_names: ["front_left_wheel_joint", "rear_left_wheel_joint"]
+    right_wheel_names: ["front_right_wheel_joint", "rear_right_wheel_joint"]
+
+    wheel_separation: 0.22
+    wheel_radius: 0.04
+    wheel_separation_multiplier: 1.5
+    wheel_radius_multiplier: 1.0  
+
+    publish_rate: 50.0
+    # odom_frame_id: odom
+    base_frame_id: base_footprint
+    publish_wheel_tf: true
+    publish_cmd: true 
+    enable_odom_tf: false
+    position_feedback: true
+    linear:
+      x: {min_velocity: -1.0, max_velocity: 1.0}
+
+imu_broadcaster:
+  ros__parameters:
+    sensor_name: "imu"
+    frame_id:  "imu_link"
