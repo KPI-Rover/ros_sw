@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="wheel_interface" params="prefix">
+        <joint name="${prefix}_joint">
+            <command_interface name="velocity">
+                <param name="min">-10</param>
+                <param name="max">10</param>
+            </command_interface>
+            <state_interface name="position" />
+            <state_interface name="velocity" />
+        </joint>
+    </xacro:macro>
+    
+    <xacro:unless value="$(arg sim_mode)">
+        <ros2_control name="KPIRoverSystemHW" type="system">
+            <hardware>
+                <plugin>kpi_rover_system_hw/KPIRoverSystemHW</plugin>
+                <param name="serial_device">$(arg serial_device)</param>
+                <param name="baud_rate">$(arg baud_rate)</param>
+                <param name="encoder_ticks_per_rev">821</param>
+                <param name="wheel_radius">0.04</param>
+            </hardware>
+            <xacro:wheel_interface prefix="front_left_wheel" />
+            <xacro:wheel_interface prefix="front_right_wheel" />
+            <xacro:wheel_interface prefix="rear_left_wheel" />
+            <xacro:wheel_interface prefix="rear_right_wheel" />
+            <sensor name="imu">
+                <state_interface name="orientation.x" />
+                <state_interface name="orientation.y" />
+                <state_interface name="orientation.z" />
+                <state_interface name="orientation.w" />
+                <state_interface name="angular_velocity.x" />
+                <state_interface name="angular_velocity.y" />
+                <state_interface name="angular_velocity.z" />
+                <state_interface name="linear_acceleration.x" />
+                <state_interface name="linear_acceleration.y" />
+                <state_interface name="linear_acceleration.z" />
+            </sensor>
+        </ros2_control>
+    </xacro:unless>
+
+
+    <xacro:if value="$(arg sim_mode)">
+        <ros2_control name="GazeboSystem" type="system">
+            <hardware>
+                <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+            </hardware>
+            <xacro:wheel_interface prefix="front_left_wheel" />
+            <xacro:wheel_interface prefix="front_right_wheel" />
+            <xacro:wheel_interface prefix="rear_left_wheel" />
+            <xacro:wheel_interface prefix="rear_right_wheel" />
+        </ros2_control>
+        
+        <gazebo>
+            <!-- Joint state publisher -->
+            <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+            <parameters>$(find kpi_rover_bringup)/config/kpi_rover_controllers.yaml</parameters>
+            </plugin>
+        </gazebo>
+    </xacro:if>
+</robot>
