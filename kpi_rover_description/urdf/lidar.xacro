@@ -10,7 +10,7 @@
         <visual>
             <origin xyz="0.1 0 0.05" rpy="0 0 0"/>
             <geometry>
-                <mesh filename = "package://kpi_rover_description/description/meshes/lidar.dae"/>
+                <mesh filename = "package://kpi_rover_description/meshes/lidar.dae"/>
             </geometry>
         </visual>
         <inertial>

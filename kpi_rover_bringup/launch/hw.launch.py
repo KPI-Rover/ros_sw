@@ -29,7 +29,7 @@ def generate_launch_description():
     # Calculate robot description for the controller manager
     robot_description_content = Command([
         PathJoinSubstitution([FindExecutable(name='xacro')]), ' ',
-        PathJoinSubstitution([FindPackageShare('kpi_rover_description'), 'description', 'robot.urdf.xacro']), ' ',
+        PathJoinSubstitution([FindPackageShare('kpi_rover_description'), 'urdf', 'robot.urdf.xacro']), ' ',
         'use_sim_time:=', use_sim_time, ' ',
         'sim_mode:=false', ' ',
         'serial_device:=', serial_device, ' ',
