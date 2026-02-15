@@ -19,7 +19,7 @@ def generate_launch_description():
     pkg_share = FindPackageShare('kpi_rover_description')
     
     # Process the URDF file
-    xacro_file = PathJoinSubstitution([pkg_share, 'description', 'robot.urdf.xacro'])
+    xacro_file = PathJoinSubstitution([pkg_share, 'urdf', 'robot.urdf.xacro'])
     
     robot_description_config = Command([
         'xacro ', xacro_file, 
