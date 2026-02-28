@@ -41,10 +41,17 @@ namespace kpi_rover_system_hw
         memset(hw_positions_, 0, sizeof(hw_positions_));
         memset(hw_velocities_, 0, sizeof(hw_velocities_));
         memset(hw_commands_, 0, sizeof(hw_commands_));
+        memset(previous_encoder_values_, 0, sizeof(previous_encoder_values_));
+        first_encoder_read_ = true;
+        
         memset(imu_orientation_, 0, sizeof(imu_orientation_));
         imu_orientation_[0] = 1.0; // w=1.0 for valid identity quaternion
         memset(imu_angular_velocity_, 0, sizeof(imu_angular_velocity_));
         memset(imu_linear_acceleration_, 0, sizeof(imu_linear_acceleration_));
+
+        first_imu_read_ = true;
+        memset(initial_imu_orientation_, 0, sizeof(initial_imu_orientation_));
+        initial_imu_orientation_[0] = 1.0;
 
         return hardware_interface::CallbackReturn::SUCCESS;
     }
@@ -54,14 +61,14 @@ namespace kpi_rover_system_hw
         std::vector<hardware_interface::StateInterface> state_interfaces;
 
         // Joint state interfaces
-        state_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[3]);
-        state_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[3]);
-        state_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[2]);
-        state_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]);
-        state_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[0]);
-        state_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[0]);
-        state_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[1]);
-        state_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]);
+        state_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[1]);
+        state_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]);
+        state_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[0]);
+        state_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[0]);
+        state_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[2]);
+        state_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]);
+        state_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[3]);
+        state_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[3]);
 
         // IMU state interfaces
         state_interfaces.emplace_back("imu", "orientation.x", &imu_orientation_[1]);
@@ -81,16 +88,22 @@ namespace kpi_rover_system_hw
     std::vector<hardware_interface::CommandInterface> KPIRoverSystemHW::export_command_interfaces()
     {
         std::vector<hardware_interface::CommandInterface> command_interfaces;
-        command_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]);
-        command_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]);
-        command_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[0]);
-        command_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]);
+        command_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[1]);
+        command_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_commands_[0]);
+        command_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_commands_[2]);
+        command_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_commands_[3]);
         return command_interfaces;
     }
 
     hardware_interface::CallbackReturn KPIRoverSystemHW::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_configure()");
+        if (ecu_bridge_) {
+            if (!ecu_bridge_->start()) {
+                RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to start ECU bridge");
+                return hardware_interface::CallbackReturn::ERROR;
+            }
+        }
         return hardware_interface::CallbackReturn::SUCCESS;
     }
 
@@ -106,21 +119,17 @@ namespace kpi_rover_system_hw
     hardware_interface::CallbackReturn KPIRoverSystemHW::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_activate()");
-        if (ecu_bridge_) {
-            if (!ecu_bridge_->start()) {
-                RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Failed to start ECU bridge");
-                return hardware_interface::CallbackReturn::ERROR;
-            }
-        }
+        
+        // Reset encoder first read flag
+        first_encoder_read_ = true;
+        first_imu_read_ = true;
+        
         return hardware_interface::CallbackReturn::SUCCESS;
     }
 
     hardware_interface::CallbackReturn KPIRoverSystemHW::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
     {
         RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "on_deactivate()");
-        if (ecu_bridge_) {
-            ecu_bridge_->stop();
-        }
         return hardware_interface::CallbackReturn::SUCCESS;
     }
 
@@ -128,17 +137,65 @@ namespace kpi_rover_system_hw
     {
         if (!ecu_bridge_) return hardware_interface::return_type::ERROR;
 
+        if (!ecu_bridge_->isConnected()) {
+            return hardware_interface::return_type::OK;
+        }
+
+        // Wait for first valid reading
+        if (!ecu_bridge_->isEncoderDataValid()) {
+            return hardware_interface::return_type::OK;
+        }
+
         // 1. Read Encoders
         auto enc = ecu_bridge_->getEncoderData();
+        
+        if (first_encoder_read_) {
+            for (int i = 0; i < 4; i++) {
+                previous_encoder_values_[i] = enc.values[i];
+            }
+            first_encoder_read_ = false;
+            // Return early on first read to establish baseline without accumulation
+            return hardware_interface::return_type::OK;
+        }
+
         for (int i = 0; i < 4; i++) {
-            double position_diff_rad = (2.0 * M_PI * enc.values[i] * -1.0) / encoder_ticks_per_rev_;
+            long long current_val = enc.values[i];
+            
+            // Calculate diff
+            long long diff = current_val - previous_encoder_values_[i];
+            previous_encoder_values_[i] = current_val;
+
+            double position_diff_rad = (2.0 * M_PI * diff) / encoder_ticks_per_rev_;
             hw_positions_[i] += position_diff_rad;
             hw_velocities_[i] = (position_diff_rad / period.seconds()) * wheel_radius_;
         }
 
         // 2. Read IMU
         auto imu = ecu_bridge_->getIMUData();
-        for (int i = 0; i < 4; i++) imu_orientation_[i] = imu.quat[i];
+        
+
+        // Handle initial orientation offset
+        if (first_imu_read_) {
+            for (int i=0; i<4; i++) initial_imu_orientation_[i] = imu.quat[i];
+            first_imu_read_ = false;
+        }
+        
+        // Apply quaternion inverse rotation to zero the orientation
+        // q_rel = q_init_inv * q_curr
+        // q_init_inv = (w, -x, -y, -z) if unit quaternion
+        double q_init_inv[4] = {initial_imu_orientation_[0], -initial_imu_orientation_[1], -initial_imu_orientation_[2], -initial_imu_orientation_[3]};
+        double q_curr[4] = {imu.quat[0], imu.quat[1], imu.quat[2], imu.quat[3]};
+        
+        // w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+        imu_orientation_[0] = q_init_inv[0]*q_curr[0] - q_init_inv[1]*q_curr[1] - q_init_inv[2]*q_curr[2] - q_init_inv[3]*q_curr[3];
+        // x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+        imu_orientation_[1] = q_init_inv[0]*q_curr[1] + q_init_inv[1]*q_curr[0] + q_init_inv[2]*q_curr[3] - q_init_inv[3]*q_curr[2];
+        // y = w1*y2 - x1*z2 + y1*w2 + z1*x2
+        imu_orientation_[2] = q_init_inv[0]*q_curr[2] - q_init_inv[1]*q_curr[3] + q_init_inv[2]*q_curr[0] + q_init_inv[3]*q_curr[1];
+        // z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+        imu_orientation_[3] = q_init_inv[0]*q_curr[3] + q_init_inv[1]*q_curr[2] - q_init_inv[2]*q_curr[1] + q_init_inv[3]*q_curr[0];
+
+
         for (int i = 0; i < 3; i++) {
             imu_angular_velocity_[i] = imu.gyro[i];
             imu_linear_acceleration_[i] = imu.accel[i];
@@ -152,10 +209,10 @@ namespace kpi_rover_system_hw
         if (!ecu_bridge_) return hardware_interface::return_type::ERROR;
 
         int32_t speeds[4] = {
-            convertToRPM100(hw_commands_[0] * -1.0),
-            convertToRPM100(hw_commands_[1] * -1.0),
-            convertToRPM100(hw_commands_[2] * -1.0),
-            convertToRPM100(hw_commands_[3] * -1.0)
+            convertToRPM100(hw_commands_[0]),
+            convertToRPM100(hw_commands_[1]),
+            convertToRPM100(hw_commands_[2]),
+            convertToRPM100(hw_commands_[3])
         };
         ecu_bridge_->setMotorSpeeds(speeds);
 

@@ -31,6 +31,8 @@ def generate_launch_description():
             'serial_port': '/dev/lidar',
             'serial_baudrate': '460800',
             'frame_id': 'laser_frame',
+            'inverted': 'false', 
+            'angle_compensate': 'true',
         }.items(),
         condition=IfCondition(PythonExpression(["'", lidar_model, "' == 'rplidar'"]))
     )

@@ -4,6 +4,7 @@
     <xacro:arg name="sim_mode" default="true"/>
     <xacro:arg name="serial_device" default="/dev/ttyAMA2"/>
     <xacro:arg name="baud_rate" default="921600"/>
+    <xacro:arg name="encoder_ticks_per_rev" default="1320"/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />

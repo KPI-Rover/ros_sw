@@ -44,6 +44,8 @@ private:
     double imu_orientation_[4]; // w, x, y, z
     double imu_angular_velocity_[3]; // x, y, z
     double imu_linear_acceleration_[3]; // x, y, z
+    double initial_imu_orientation_[4]; // w, x, y, z
+    bool first_imu_read_{true};
 
     // ECU Bridge
     std::unique_ptr<kpi_rover::ECUBridge> ecu_bridge_;
@@ -51,6 +53,10 @@ private:
     // Parameters
     int32_t encoder_ticks_per_rev_{4096};
     double wheel_radius_{0.04};
+
+    // Encoder previous values
+    long long previous_encoder_values_[4] = {0, 0, 0, 0};
+    bool first_encoder_read_{true};
 
     // Utils
     static constexpr double RAD_S_TO_RPM = 60.0 / (2.0 * M_PI);

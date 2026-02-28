@@ -15,6 +15,12 @@ def generate_launch_description():
         default_value='rplidar',
         description='Lidar model to be used'
     )
+
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation (Gazebo) clock if true'
+    )
     
     # Launch HW
     hw_launch = IncludeLaunchDescription(
@@ -33,8 +39,20 @@ def generate_launch_description():
         }.items()
     )
 
+    # Launch SLAM
+    slam_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('kpi_rover_slam'), 'launch', 'slam.launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': LaunchConfiguration('use_sim_time')
+        }.items()
+    )
+
     return LaunchDescription([
         lidar_model_arg,
+        use_sim_time_arg,
         hw_launch,
-        lidar_launch
+        lidar_launch,
+        slam_launch
     ])
