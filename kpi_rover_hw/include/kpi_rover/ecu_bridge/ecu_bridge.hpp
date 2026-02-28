@@ -84,6 +84,12 @@ namespace kpi_rover
         EncoderData getEncoderData() const { return encoder_cache_.get(); }
 
         /**
+         * @brief Checks if valid encoder data has been received.
+         * @return true if valid, false otherwise.
+         */
+        bool isEncoderDataValid() const { return encoder_cache_.isValid(); }
+
+        /**
          * @brief Retrieves the cached API version of the ECU.
          * @return API version number.
          */

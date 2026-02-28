@@ -22,8 +22,15 @@ def generate_launch_description():
         description='Baud rate for serial communication'
     ))
 
+    declared_arguments.append(DeclareLaunchArgument(
+        'encoder_ticks_per_rev',
+        default_value='1320',
+        description='Number of encoder ticks per revolution'
+    ))
+
     serial_device = LaunchConfiguration('serial_device')
     baud_rate = LaunchConfiguration('baud_rate')
+    encoder_ticks_per_rev = LaunchConfiguration('encoder_ticks_per_rev')
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
 
     # Calculate robot description for the controller manager
@@ -33,7 +40,8 @@ def generate_launch_description():
         'use_sim_time:=', use_sim_time, ' ',
         'sim_mode:=false', ' ',
         'serial_device:=', serial_device, ' ',
-        'baud_rate:=', baud_rate
+        'baud_rate:=', baud_rate, ' ',
+        'encoder_ticks_per_rev:=', encoder_ticks_per_rev
     ])
     robot_description = {'robot_description': robot_description_content}
 
@@ -65,7 +73,11 @@ def generate_launch_description():
             {'serial_device': serial_device},
             {'baud_rate': baud_rate}
         ],
-        output='screen'
+        output='screen',
+        remappings=[
+            ('/diff_drive_controller/odom', '/odom'),
+            ('/diff_drive_controller/cmd_vel_unstamped', '/cmd_vel')
+        ]
     )
 
     # Spawners
