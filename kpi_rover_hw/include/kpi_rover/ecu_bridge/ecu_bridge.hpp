@@ -164,8 +164,8 @@ namespace kpi_rover
 
         // Periods
         std::atomic<std::chrono::milliseconds> imu_period_{std::chrono::milliseconds(20)}; 
-        std::atomic<std::chrono::milliseconds> encoder_period_{std::chrono::milliseconds(100)};
-        std::atomic<std::chrono::milliseconds> motor_period_{std::chrono::milliseconds(100)};
+        std::atomic<std::chrono::milliseconds> encoder_period_{std::chrono::milliseconds(50)};
+        std::atomic<std::chrono::milliseconds> motor_period_{std::chrono::milliseconds(50)};
 
         // Execution control
         std::atomic<bool> running_{false};

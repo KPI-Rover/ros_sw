@@ -63,10 +63,13 @@ namespace kpi_rover_system_hw
         // Joint state interfaces
         state_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[1]);
         state_interfaces.emplace_back("front_left_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[1]);
+        
         state_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_POSITION, &hw_positions_[0]);
         state_interfaces.emplace_back("rear_left_wheel_joint",   hardware_interface::HW_IF_VELOCITY, &hw_velocities_[0]);
+        
         state_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_POSITION, &hw_positions_[2]);
         state_interfaces.emplace_back("front_right_wheel_joint", hardware_interface::HW_IF_VELOCITY, &hw_velocities_[2]);
+        
         state_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_POSITION, &hw_positions_[3]);
         state_interfaces.emplace_back("rear_right_wheel_joint",  hardware_interface::HW_IF_VELOCITY, &hw_velocities_[3]);
 
@@ -167,7 +170,7 @@ namespace kpi_rover_system_hw
 
             double position_diff_rad = (2.0 * M_PI * diff) / encoder_ticks_per_rev_;
             hw_positions_[i] += position_diff_rad;
-            hw_velocities_[i] = (position_diff_rad / period.seconds()) * wheel_radius_;
+            hw_velocities_[i] = position_diff_rad / period.seconds();
         }
 
         // 2. Read IMU
