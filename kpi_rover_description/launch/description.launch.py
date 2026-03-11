@@ -15,6 +15,7 @@ def generate_launch_description():
     sim_mode = LaunchConfiguration('sim_mode')
     serial_device = LaunchConfiguration('serial_device')
     baud_rate = LaunchConfiguration('baud_rate')
+    wheel_radius = LaunchConfiguration('wheel_radius')
 
     pkg_share = FindPackageShare('kpi_rover_description')
     
@@ -26,7 +27,8 @@ def generate_launch_description():
         ' use_sim_time:=', use_sim_time, 
         ' sim_mode:=', sim_mode,
         ' serial_device:=', serial_device,
-        ' baud_rate:=', baud_rate
+        ' baud_rate:=', baud_rate,
+        ' wheel_radius:=', wheel_radius
     ])
 
     # Launch!
@@ -47,6 +49,10 @@ def generate_launch_description():
             'baud_rate',
             default_value='921600',
             description='Baud rate for serial communication'),
+        DeclareLaunchArgument(
+            'wheel_radius',
+            default_value='0.034',
+            description='Wheel radius in meters'),
 
         Node(
             package='robot_state_publisher',

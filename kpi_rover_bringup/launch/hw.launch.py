@@ -28,9 +28,16 @@ def generate_launch_description():
         description='Number of encoder ticks per revolution'
     ))
 
+    declared_arguments.append(DeclareLaunchArgument(
+        'wheel_radius',
+        default_value='0.034',
+        description='Wheel radius in meters'
+    ))
+
     serial_device = LaunchConfiguration('serial_device')
     baud_rate = LaunchConfiguration('baud_rate')
     encoder_ticks_per_rev = LaunchConfiguration('encoder_ticks_per_rev')
+    wheel_radius = LaunchConfiguration('wheel_radius')
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
 
     # Calculate robot description for the controller manager
@@ -41,7 +48,8 @@ def generate_launch_description():
         'sim_mode:=false', ' ',
         'serial_device:=', serial_device, ' ',
         'baud_rate:=', baud_rate, ' ',
-        'encoder_ticks_per_rev:=', encoder_ticks_per_rev
+        'encoder_ticks_per_rev:=', encoder_ticks_per_rev, ' ',
+        'wheel_radius:=', wheel_radius
     ])
     robot_description = {'robot_description': robot_description_content}
 
@@ -61,6 +69,7 @@ def generate_launch_description():
             'sim_mode': 'false',
             'serial_device': serial_device,
             'baud_rate': baud_rate,
+            'wheel_radius': wheel_radius,
         }.items()
     )
 
@@ -71,7 +80,8 @@ def generate_launch_description():
             robot_description,
             controllers_config,
             {'serial_device': serial_device},
-            {'baud_rate': baud_rate}
+            {'baud_rate': baud_rate},
+            {'diff_drive_controller.wheel_radius': wheel_radius}
         ],
         output='screen',
         remappings=[

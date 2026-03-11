@@ -5,13 +5,12 @@
     <xacro:arg name="serial_device" default="/dev/ttyAMA2"/>
     <xacro:arg name="baud_rate" default="921600"/>
     <xacro:arg name="encoder_ticks_per_rev" default="1320"/>
+    <xacro:arg name="wheel_radius" default="0.034"/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />
     <xacro:include filename="robot_core.xacro" />
-    <xacro:include filename="camera.xacro" />
-    <xacro:include filename="water_tank.xacro" />
-<!-- <xacro:include filename="flexible_rod.xacro" /> -->
+    <!-- <xacro:include filename="camera.xacro" /> -->
     <xacro:include filename="ros2_control.xacro" />
     <xacro:include filename="imu.xacro" />
     <xacro:include filename="lidar.xacro" />

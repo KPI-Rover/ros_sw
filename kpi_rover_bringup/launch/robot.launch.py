@@ -16,6 +16,12 @@ def generate_launch_description():
         description='Lidar model to be used'
     )
 
+    wheel_radius_arg = DeclareLaunchArgument(
+        'wheel_radius',
+        default_value='0.034',
+        description='Wheel radius in meters'
+    )
+
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
@@ -26,7 +32,10 @@ def generate_launch_description():
     hw_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_bringup, 'launch', 'hw.launch.py')
-        )
+        ),
+        launch_arguments={
+            'wheel_radius': LaunchConfiguration('wheel_radius')
+        }.items()
     )
 
     # Launch Lidar
@@ -51,6 +60,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         lidar_model_arg,
+        wheel_radius_arg,
         use_sim_time_arg,
         hw_launch,
         lidar_launch,

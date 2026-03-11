@@ -3,7 +3,7 @@
     <joint name="imu_joint" type="fixed">
         <parent link="base_link"/>
         <child link="imu_link"/>
-        <origin xyz="0.0 0 0.068" rpy="0 0 -1.57079632679"/>
+        <origin xyz="-0.036 0.039 0.015" rpy="0 0 0"/>
     </joint>
 
     <link name="imu_link"/>
@@ -13,9 +13,6 @@
             <always_on>1</always_on>
             <visualize>false</visualize>
             <topic>/imu_broadcaster/imu</topic>
-            <gz_frame_id>imu_link</gz_frame_id>
-            <gaussian_noise>0.01</gaussian_noise>
-            <update_rate>100.0</update_rate>
         </sensor>
     </gazebo>
 </robot>

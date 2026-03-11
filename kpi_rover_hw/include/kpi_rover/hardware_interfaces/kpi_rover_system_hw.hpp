@@ -51,8 +51,8 @@ private:
     std::unique_ptr<kpi_rover::ECUBridge> ecu_bridge_;
 
     // Parameters
-    int32_t encoder_ticks_per_rev_{4096};
-    double wheel_radius_{0.04};
+    int32_t encoder_ticks_per_rev_{1320};
+    double wheel_radius_{0.034};
 
     // Encoder previous values
     long long previous_encoder_values_[4] = {0, 0, 0, 0};
