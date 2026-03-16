@@ -48,6 +48,16 @@ def generate_launch_description():
         }.items()
     )
 
+    # Launch Localization
+    localization_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('kpi_rover_localization'), 'launch', 'localization.launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': LaunchConfiguration('use_sim_time')
+        }.items()
+    )
+
     # Launch SLAM
     slam_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -64,5 +74,6 @@ def generate_launch_description():
         use_sim_time_arg,
         hw_launch,
         lidar_launch,
+        localization_launch,
         slam_launch
     ])
