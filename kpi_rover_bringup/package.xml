@@ -20,6 +20,7 @@
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>diff_drive_controller</exec_depend>
   <exec_depend>imu_sensor_broadcaster</exec_depend>
+  <exec_depend>kpi_rover_localization</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>robot_localization</exec_depend>
   <exec_depend>navigation2</exec_depend>

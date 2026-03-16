@@ -27,7 +27,7 @@ diff_drive_controller:
     base_frame_id: base_footprint
     publish_wheel_tf: true
     publish_cmd: true 
-    enable_odom_tf: true
+    enable_odom_tf: false
 
     position_feedback: true
     linear:
