@@ -200,7 +200,7 @@ namespace kpi_rover_system_hw
 
 
         for (int i = 0; i < 3; i++) {
-            imu_angular_velocity_[i] = imu.gyro[i];
+            imu_angular_velocity_[i] = imu.gyro[i] * M_PI / 180.0;
             imu_linear_acceleration_[i] = imu.accel[i];
         }
 
