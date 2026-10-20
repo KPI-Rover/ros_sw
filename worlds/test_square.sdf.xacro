@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!--
+  Test square world for checking motion accuracy.
+
+  The square is 1x1 m with corners at (0, 0), (1, 0), (1, 1) and (0, 1).
+  The start corner is (0, 0) with the robot facing +X, which matches the
+  default spawn pose and start point 'a'. The green outline around the start
+  corner marks the robot footprint and the green arrow shows the start
+  heading, so after a lap both position and heading errors are visible.
+
+  Arguments:
+    floor   - floor type from include/floors.yaml
+    marking - marking style from include/markings.yaml
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="floor" default="wood"/>
+  <xacro:arg name="marking" default="white"/>
+
+  <xacro:include filename="include/common.xacro"/>
+  <xacro:include filename="include/floor.xacro"/>
+  <xacro:include filename="include/marking.xacro"/>
+  <xacro:include filename="include/structures.xacro"/>
+
+  <!-- Square marking line width -->
+  <xacro:property name="w" value="0.05"/>
+
+  <world name="test_square">
+
+    <xacro:world_setup/>
+
+    <xacro:floor type="$(arg floor)" size="10"/>
+
+    <!-- 1x1 m square marking, driven counterclockwise from the start corner, so every corner is a left turn. -->
+    <model name="square_marking">
+      <static>true</static>
+      <link name="link">
+        <xacro:marking_line name="edge_bottom" x1="0" y1="0" x2="1" y2="0" style="$(arg marking)" width="${w}" start="left" end="left"/>
+        <xacro:marking_line name="edge_right" x1="1" y1="0" x2="1" y2="1" style="$(arg marking)" width="${w}" start="left" end="left"/>
+        <xacro:marking_line name="edge_top" x1="1" y1="1" x2="0" y2="1" style="$(arg marking)" width="${w}" start="left" end="left"/>
+        <xacro:marking_line name="edge_left" x1="0" y1="1" x2="0" y2="0" style="$(arg marking)" width="${w}" start="left" end="left"/>
+      </link>
+    </model>
+
+    <!-- Start corner with the robot facing +X. -->
+    <xacro:start_point name="a" x="0" y="0" yaw="0"/>
+
+  </world>
+</sdf>

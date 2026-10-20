@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<!--
+  Movable objects from the object library (objects.yaml): small items,
+  low ones under the lidar, a flat board to drive over, and traffic cones. The model origin is on the floor under the object center.
+
+  Usage:
+    <xacro:scatter_object name="box_0" type="cardboard_box_01" x="1" y="2" yaw="0.5"/>
+    <xacro:scatter_objects objects="${[['traffic_cone_45', 1, 2, 0]]}"/>
+  On uneven ground an object gets the height it is dropped from: z, or
+  [type, x, y, yaw, z] in a list; a scaled-down world (the garden) also
+  scales its objects: scale, or [type, x, y, yaw, z, scale] (the mass goes
+  with the volume).
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="common.xacro"/>
+
+  <xacro:property name="objects_lib" value="${xacro.load_yaml('$(find kpi_rover)/worlds/include/objects.yaml')}"/>
+  <xacro:property name="media_dir" value="$(find kpi_rover)/worlds/media"/>
+  <xacro:property name="cone_base_height" value="0.03"/>
+
+  <xacro:macro name="object_surface">
+    <surface>
+      <friction>
+        <ode>
+          <mu>0.6</mu>
+          <mu2>0.6</mu2>
+        </ode>
+      </friction>
+    </surface>
+  </xacro:macro>
+
+  <xacro:macro name="scatter_object" params="name type x y yaw z:=0 scale:=1">
+    <xacro:property name="cfg" value="${objects_lib[type]}"/>
+    <xacro:property name="k" value="${float(scale)}"/>
+    <xacro:property name="sx" value="${cfg['size'][0] * k}"/>
+    <xacro:property name="sy" value="${cfg['size'][1] * k}"/>
+    <xacro:property name="sz" value="${cfg['size'][2] * k}"/>
+    <xacro:property name="m" value="${cfg['mass'] * k ** 3}"/>
+    <xacro:property name="base_h" value="${cone_base_height * k}"/>
+    <model name="${name}">
+      <pose>${x} ${y} ${z} 0 0 ${yaw}</pose>
+      <link name="link">
+        <!-- Inertia of a solid box filling the bounding box. -->
+        <inertial>
+          <pose>0 0 ${sz / 2} 0 0 0</pose>
+          <mass>${m}</mass>
+          <inertia>
+            <ixx>${m * (sy ** 2 + sz ** 2) / 12}</ixx>
+            <iyy>${m * (sx ** 2 + sz ** 2) / 12}</iyy>
+            <izz>${m * (sx ** 2 + sy ** 2) / 12}</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+
+        <xacro:if value="${cfg['shape'] == 'box'}">
+          <collision name="collision">
+            <pose>0 0 ${sz / 2} 0 0 0</pose>
+            <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+            <xacro:object_surface/>
+          </collision>
+        </xacro:if>
+        <xacro:if value="${cfg['shape'] == 'cylinder'}">
+          <collision name="collision">
+            <pose>0 0 ${sz / 2} 0 0 0</pose>
+            <geometry><cylinder><radius>${max(sx, sy) / 2}</radius><length>${sz}</length></cylinder></geometry>
+            <xacro:object_surface/>
+          </collision>
+        </xacro:if>
+        <xacro:if value="${cfg['shape'] == 'cone'}">
+          <collision name="base_collision">
+            <pose>0 0 ${base_h / 2} 0 0 0</pose>
+            <geometry><box><size>${sx} ${sy} ${base_h}</size></box></geometry>
+            <xacro:object_surface/>
+          </collision>
+          <collision name="body_collision">
+            <pose>0 0 ${(sz + base_h) / 2} 0 0 0</pose>
+            <geometry><cylinder><radius>${cfg['radius'] * k}</radius><length>${sz - base_h}</length></cylinder></geometry>
+            <xacro:object_surface/>
+          </collision>
+        </xacro:if>
+
+        <visual name="visual">
+          <pose>${-cfg['center'][0] * k} ${-cfg['center'][1] * k} ${sz / 2 - cfg['center'][2] * k} ${cfg['roll']} 0 0</pose>
+          <geometry><mesh><uri>file://${media_dir}/${cfg['mesh']}</uri><scale>${k} ${k} ${k}</scale></mesh></geometry>
+          <xacro:if value="${'texture' in cfg}">
+            <xacro:world_material color="${[1, 1, 1]}" texture="${cfg['texture']}"/>
+          </xacro:if>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <!-- Objects [type, x, y, yaw], [type, x, y, yaw, z] or [type, x, y, yaw, z, scale] lo..hi-1, split in halves to keep the recursion shallow. -->
+  <xacro:macro name="scatter_objects_range" params="objects lo hi">
+    <xacro:if value="${hi - lo == 1}">
+      <xacro:scatter_object name="${objects[lo][0]}_${lo}" type="${objects[lo][0]}"
+          x="${objects[lo][1]}" y="${objects[lo][2]}" yaw="${objects[lo][3]}"
+          z="${objects[lo][4] if len(objects[lo]) > 4 else 0}" scale="${objects[lo][5] if len(objects[lo]) > 5 else 1}"/>
+    </xacro:if>
+    <xacro:if value="${hi - lo > 1}">
+      <xacro:scatter_objects_range objects="${objects}" lo="${lo}" hi="${(lo + hi) // 2}"/>
+      <xacro:scatter_objects_range objects="${objects}" lo="${(lo + hi) // 2}" hi="${hi}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="scatter_objects" params="objects">
+    <xacro:if value="${len(objects) > 0}">
+      <xacro:scatter_objects_range objects="${objects}" lo="0" hi="${len(objects)}"/>
+    </xacro:if>
+  </xacro:macro>
+
+</sdf>

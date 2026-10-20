@@ -1,0 +1,10 @@
+# Real terrain heights for the garden relief, made by fetch_relief.py.
+# The PNG holds heights from h_min (black) to h_max (white), m, on a
+# north-up grid of size x size m with step m spacing centered at lat, lon.
+lat: 47.0787331
+lon: 33.1950273
+size: 800.0
+step: 5.0
+h_min: 61.763
+h_max: 69.193
+source: Terrain Tiles on AWS Open Data (terrarium, mostly SRTM), https://registry.opendata.aws/terrain-tiles/

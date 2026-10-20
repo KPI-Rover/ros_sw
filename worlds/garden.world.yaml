@@ -1,0 +1,164 @@
+# Manifest of garden.sdf.xacro for tools (see world_info.py): what the world
+# is and what each argument means. Defaults are the <xacro:arg> ones.
+title: Garden
+description: >-
+  An apple orchard in the steppe (a real place near 47.08, 33.20) scaled down
+  to the robot: the trees are four times as tall as it is. Grass, patches of
+  loose soil and mud, pits with and without water, and a two-track field road
+  with puddles around the orchard.
+# Objects in the garden are scaled down with it (garden/params.yaml scale).
+objects_scale: 0.345
+start_points:
+  road_a: Road, south side
+  road_b: Road, north side
+  garden_a: Orchard, west end
+  garden_b: Orchard, east end
+groups:
+  terrain: Terrain
+  grounds: Grounds and plants
+  obstacles: Pits, puddles, trees
+  objects: Objects
+  physics: Friction
+  render: Look
+args:
+  relief:
+    type: choice
+    choices: [steppe, hills]
+    label: Relief
+    description: steppe — the real, almost flat place; hills — made-up hills.
+    group: terrain
+  terrain_seed:
+    type: int
+    min: 0
+    label: Terrain variant
+    description: One number sets the small relief, the ground patches, the pits and the grass; the same number gives the same garden.
+    group: terrain
+  grass:
+    type: float
+    min: 0.0
+    max: 3.0
+    step: 0.1
+    label: Grass density
+    description: Grass density multiplier; 0 — no grass (the lightest for the simulation).
+    group: grounds
+  soil:
+    type: float
+    min: 0.0
+    max: 0.4
+    step: 0.01
+    label: Loose soil share
+    description: Share of the orchard covered with patches of loose soil.
+    group: grounds
+  mud:
+    type: float
+    min: 0.0
+    max: 0.4
+    step: 0.01
+    label: Mud share
+    description: Share of the orchard covered with mud (mostly in the hollows).
+    group: grounds
+  pits:
+    type: bool
+    label: Pits in the orchard
+    description: Four pits between the rows, 5–17 cm deep, two of them with water.
+    group: obstacles
+  puddles:
+    type: bool
+    label: Puddles on the road
+    description: Three puddles in the road ruts.
+    group: obstacles
+  tree_rows:
+    type: int
+    min: 0
+    max: 7
+    label: Tree rows
+    description: Number of tree rows; 0 — no trees.
+    group: obstacles
+  grass_friction:
+    advanced: true
+    type: float
+    min: 0.05
+    max: 1.5
+    step: 0.05
+    label: Grass and soil friction
+    group: physics
+  mud_friction:
+    advanced: true
+    type: float
+    min: 0.05
+    max: 1.5
+    step: 0.05
+    label: Mud friction
+    group: physics
+  track_friction:
+    advanced: true
+    type: float
+    min: 0.05
+    max: 1.5
+    step: 0.05
+    label: Road track friction
+    group: physics
+  shadows:
+    advanced: true
+    type: bool
+    label: Shadows
+    description: Sun shadows; without them the simulation is a bit faster.
+    group: render
+  objects:
+    type: int
+    min: 0
+    max: 50
+    label: Objects
+    description: Number of boxes, crates, cones and other objects scattered at random over the garden and the road; some are low, under the lidar, and a flat board can be driven over.
+    group: objects
+  objects_seed:
+    type: string
+    label: Objects layout
+    description: A number sets where the objects lie; empty — a new random layout every time.
+    group: objects
+  terrain: {internal: true}
+  layout: {internal: true}
+presets:
+  light:
+    label: Light
+    description: No grass and no shadows — the fastest simulation.
+    args: {grass: 0, shadows: false}
+  dry:
+    label: Dry
+    description: No mud and no puddles.
+    args: {mud: 0, puddles: false}
+  after_rain:
+    label: After rain
+    description: Much mud and loose soil, slippery mud.
+    args: {mud: 0.35, soil: 0.25, mud_friction: 0.2}
+  open_field:
+    label: Open field
+    description: No trees — the field and the road only.
+    args: {tree_rows: 0}
+previews:
+  # Pictures for tools, rendered by render_previews.py into garden/previews/.
+  # Cameras: x, y, z (m), roll, pitch, yaw (degrees), horizontal fov (degrees).
+  cameras:
+    over: [-11, -11, 4, 0, 18, 45, 70]
+    high: [0, -14, 7, 0, 30, 90, 70]
+    horizon: [-12, -12, 1.2, 0, 6, 45, 80]
+    grass: [-9.6, -3, 0.3, 0, 18, 20, 60]
+    pit: [-4.4, 1.25, 0.55, 0, 28, 35, 65]
+    puddle: [1.6, -7.05, 0.35, 0, 12, 0, 60]
+    orchard: [-3.2, -9.2, 2.2, 0, 22, 75, 60]
+    objects: [0, -11, 3, 0, 35, 90, 60]
+  world: over
+  presets: true
+  start_points: true
+  map: {center: [0, 0], size: 21}
+  args:
+    relief: {camera: horizon, values: [steppe, hills]}
+    terrain_seed: {camera: high, values: [11, 3, 25]}
+    grass: {camera: grass, values: [0, 1, 3]}
+    soil: {camera: high, values: [0, 0.13, 0.4]}
+    mud: {camera: high, values: [0, 0.12, 0.4]}
+    pits: {camera: pit, values: [true, false]}
+    puddles: {camera: puddle, values: [true, false]}
+    tree_rows: {camera: over, values: [0, 3, 6]}
+    shadows: {camera: orchard, values: [true, false]}
+    objects: {camera: objects, values: [0, 14, 45], with: {objects_seed: 1, grass: 0}}

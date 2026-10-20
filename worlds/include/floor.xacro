@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!--
+  Flat floor with a type from floors.yaml.
+
+  Usage:
+    <xacro:floor type="concrete" size="10"/>
+    <xacro:floor type="concrete" size_x="15" size_y="8"/>
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="common.xacro"/>
+
+  <xacro:property name="floors" value="${xacro.load_yaml('$(find kpi_rover)/worlds/include/floors.yaml')}"/>
+
+  <!-- Textured tiles k..nx*ny-1 of an nx x ny grid of tile_x x tile_y rectangles centered at the origin. -->
+  <xacro:macro name="floor_tiles" params="k nx ny tile_x tile_y color texture">
+    <visual name="tile_${k}">
+      <pose>${tile_x * (k % nx + 0.5 - nx / 2)} ${tile_y * (k // nx + 0.5 - ny / 2)} 0 0 0 0</pose>
+      <geometry>
+        <plane>
+          <normal>0 0 1</normal>
+          <size>${tile_x} ${tile_y}</size>
+        </plane>
+      </geometry>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+    </visual>
+    <xacro:if value="${k + 1 &lt; nx * ny}">
+      <xacro:floor_tiles k="${k + 1}" nx="${nx}" ny="${ny}" tile_x="${tile_x}" tile_y="${tile_y}" color="${color}" texture="${texture}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- 'size' sets a square floor, 'size_x' and 'size_y' override it for a rectangular one. -->
+  <xacro:macro name="floor" params="type size:=10 size_x:=0 size_y:=0">
+    <xacro:property name="floor_cfg" value="${floors[type]}"/>
+    <xacro:property name="fx" value="${size_x or size}"/>
+    <xacro:property name="fy" value="${size_y or size}"/>
+    <xacro:property name="nx" value="${max(1, int(round(fx / floor_cfg['tile'])))}"/>
+    <xacro:property name="ny" value="${max(1, int(round(fy / floor_cfg['tile'])))}"/>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>${fx} ${fy}</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>${floor_cfg['mu']}</mu>
+                <mu2>${floor_cfg['mu']}</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+
+        <xacro:if value="${floor_cfg['texture'] == ''}">
+          <visual name="visual">
+            <geometry>
+              <plane>
+                <normal>0 0 1</normal>
+                <size>${fx} ${fy}</size>
+              </plane>
+            </geometry>
+            <xacro:world_material color="${floor_cfg['color']}" texture=""/>
+          </visual>
+        </xacro:if>
+        <xacro:if value="${floor_cfg['texture'] != ''}">
+          <xacro:floor_tiles k="0" nx="${nx}" ny="${ny}" tile_x="${fx / nx}" tile_y="${fy / ny}"
+              color="${floor_cfg['color']}" texture="${floor_cfg['texture']}"/>
+        </xacro:if>
+      </link>
+    </model>
+  </xacro:macro>
+
+</sdf>

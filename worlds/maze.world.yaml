@@ -1,0 +1,95 @@
+# Manifest of maze.sdf.xacro for tools (see world_info.py).
+title: Maze
+description: >-
+  A warehouse with a maze: walls, passages and arches, some of them barely
+  let the robot through and some are impassable (too narrow or too low — the
+  lidar sees a passage, but the robot hits it with its top). Ready levels or a
+  random maze.
+start_points:
+  a: Maze entrance
+  b: Maze exit
+groups:
+  maze: Maze
+  look: Look
+  objects: Objects
+args:
+  maze:
+    type: choice
+    choices: [level1, level2, level3, random]
+    label: Maze
+    description: A ready level (maze/levels) or random — a random maze.
+    group: maze
+  seed: {type: int, min: 0, label: Random maze variant, group: maze, show_if: {maze: random}}
+  difficulty:
+    type: choice
+    choices: [easy, medium, hard]
+    label: Random maze difficulty
+    description: The size of the random maze and how many tight and impassable arches it has.
+    group: maze
+    show_if: {maze: random}
+  route: {type: bool, label: Show route, description: A blue line of the shortest path, visible only in the Gazebo GUI., group: maze}
+  floor: {type: choice, choices_from: floors, label: Floor, group: look}
+  wall_material: {type: choice, choices_from: walls, label: Walls, group: look}
+  arch_material:
+    type: choice
+    choices: [contrast, plain, plaster, brick, concrete, wood, metal]
+    label: Arches and narrow openings
+    description: contrast — a plain color that stands out from the walls; or a wall material.
+    group: look
+  wall_view:
+    type: choice
+    choices: [solid, transparent, hidden, marking]
+    label: Walls in the Gazebo GUI
+    description: How the GUI shows the walls; the robot always bumps into them and the sensors see them.
+    group: look
+  objects:
+    type: int
+    min: 0
+    max: 50
+    label: Objects
+    description: Number of boxes, crates, cones and other objects scattered around the maze; some are low, under the lidar, and a flat board can be driven over.
+    group: objects
+  objects_seed: {type: string, label: Layout variant, description: Empty — a new random one every time., group: objects}
+  layout: {internal: true}
+presets:
+  random_easy:
+    label: Random, easy
+    description: A new small random maze.
+    args: {maze: random, difficulty: easy}
+  random_hard:
+    label: Random, hard
+    description: A big random maze with many tight and impassable arches.
+    args: {maze: random, difficulty: hard}
+  level3:
+    label: Level 3
+    description: The biggest ready level.
+    args: {maze: level3}
+  empty:
+    label: No objects
+    description: Only the walls.
+    args: {objects: 0}
+previews:
+  # Pictures for tools, rendered by render_previews.py into maze/previews/.
+  # Cameras: x, y, z (m), roll, pitch, yaw, horizontal fov (degrees); 'gui_cameras'
+  # see what the Gazebo window shows (the route and the GUI wall views).
+  cameras:
+    top: [0, 0, 17, 0, 90, 90, 42]
+    top_gui: [0, 0, 17, 0, 90, 90, 42]
+    over: [-5.2, -5.0, 3.6, 0, 35, 45, 66]
+    over_gui: [-5.2, -5.0, 3.6, 0, 35, 45, 66]
+    arches: [0.7, 0.4, 1.4, 0, 38, 90, 70]
+  gui_cameras: [top_gui, over_gui]
+  world: over
+  presets: true
+  start_points: true
+  map: {fit: ground_plane, margin: 0.3}
+  args:
+    maze: {camera: top, values: [level1, level2, level3, random]}
+    seed: {camera: top, values: [0, 1, 2], with: {maze: random}}
+    difficulty: {camera: top, values: [easy, medium, hard], with: {maze: random}}
+    route: {camera: top_gui, values: [true, false]}
+    floor: {camera: over, values: [plain, concrete, painted_concrete, asphalt, carpet, wood, tiles]}
+    wall_material: {camera: over, values: [plain, plaster, brick, concrete, wood, metal]}
+    arch_material: {camera: arches, values: [contrast, plain, plaster, brick, concrete, wood, metal], with: {maze: level3}}
+    wall_view: {camera: over_gui, values: [solid, transparent, hidden, marking]}
+    objects: {camera: over, values: [0, 14, 45], with: {objects_seed: 1}}

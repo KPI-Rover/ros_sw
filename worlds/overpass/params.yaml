@@ -1,0 +1,25 @@
+# Overpass world geometry, shared by overpass.sdf.xacro and overpass/generator.py.
+
+# Warehouse inner size, m; walls are not higher than two robot heights.
+size_x: 15
+size_y: 8
+
+# Marking line width, m
+marking_width: 0.05
+
+# Figure eight: loop radius and distance from the crossing to the loop tangent points, m.
+loop_radius: 2.0
+tangent_distance: 4.5
+
+# Overpass: deck height (the deck bottom, 5 cm lower, leaves room for the
+# robot, 0.345 m high, to pass under it), deck length, m, and the steepest
+# ramp slope, degrees.
+height: 0.45
+deck_length: 1.4
+max_slope: 12
+
+# Overpass variants: full width, m, and rails.
+rail_width: 0.04
+overpass_types:
+  wide: {width: 0.7, rails: true}
+  narrow: {width: 0.4, rails: false}

@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<!-- Common world setup: systems, physics, scene and light. -->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="textures_dir" value="$(find kpi_rover)/worlds/media/textures"/>
+  <xacro:property name="meshes_dir" value="$(find kpi_rover)/worlds/media/meshes"/>
+
+  <!--
+    Visual visibility flags.
+    'visible_gui_only' visuals are shown in the Gazebo GUI but hidden from the
+    robot sensors, whose visibility masks (description/camera.xacro and
+    lidar.xacro) exclude this bit.
+    'visible_robot_only' visuals are seen by the robot sensors but not in the
+    Gazebo GUI: the GUI camera uses the default mask GZ_VISIBILITY_ALL
+    (0x0FFFFFFF), which excludes bit 29, while sensor masks include it.
+    'visible_no_lidar' visuals are seen by the Gazebo GUI and the robot camera
+    but not by the lidar, whose mask also excludes bit 2: for grass the robot
+    drives through, which must not look like an obstacle on the scan.
+  -->
+  <xacro:property name="visible_all" value="4294967295"/>
+  <xacro:property name="visible_no_lidar" value="4"/>
+  <xacro:property name="visible_gui_only" value="2"/>
+  <xacro:property name="visible_robot_only" value="536870912"/>
+
+  <!--
+    Material with an optional texture from worlds/media/textures: an image
+    file name (albedo only), or a photo texture directory name with
+    <name>_albedo.jpg, <name>_normal.jpg and <name>_roughness.jpg maps
+    (see tools/assets/fetch_textures.py). An absolute directory path works the same
+    way, for textures generated at launch.
+  -->
+  <xacro:macro name="world_material" params="color texture">
+    <material>
+      <ambient>${color[0]} ${color[1]} ${color[2]} 1</ambient>
+      <diffuse>${color[0]} ${color[1]} ${color[2]} 1</diffuse>
+      <xacro:if value="${texture != ''}">
+        <pbr>
+          <metal>
+            <xacro:if value="${'.' in texture.split('/')[-1]}">
+              <albedo_map>${textures_dir}/${texture}</albedo_map>
+              <roughness>0.9</roughness>
+            </xacro:if>
+            <xacro:unless value="${'.' in texture.split('/')[-1]}">
+              <xacro:property name="tex_dir" value="${texture if texture.startswith('/') else textures_dir + '/' + texture}"/>
+              <xacro:property name="tex_name" value="${texture.split('/')[-1]}"/>
+              <albedo_map>${tex_dir}/${tex_name}_albedo.jpg</albedo_map>
+              <normal_map>${tex_dir}/${tex_name}_normal.jpg</normal_map>
+              <roughness_map>${tex_dir}/${tex_name}_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+            </xacro:unless>
+            <metalness>0.0</metalness>
+          </metal>
+        </pbr>
+      </xacro:if>
+    </material>
+  </xacro:macro>
+
+  <!--
+    'shadows' turns on sun shadows; 'sky' is the background color; 'skybox'
+    shows the Gazebo built-in sky instead; 'ambient' is the ambient light
+    level and 'sun' the sun light direction.
+  -->
+  <xacro:macro name="world_setup" params="shadows:=false sky:=${[0.7, 0.7, 0.7]} skybox:=false ambient:=0.6 sun:=${[-0.3, 0.2, -0.9]}">
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+        name="gz::sim::systems::Imu">
+    </plugin>
+
+    <gravity>0 0 -9.8</gravity>
+    <physics default="0" name="default_physics" type="ode">
+      <max_step_size>0.01</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>100</real_time_update_rate>
+    </physics>
+
+    <scene>
+      <ambient>${ambient} ${ambient} ${ambient} 1</ambient>
+      <background>${sky[0]} ${sky[1]} ${sky[2]} 1</background>
+      <shadows>${'true' if shadows else 'false'}</shadows>
+      <xacro:if value="${skybox}">
+        <sky/>
+      </xacro:if>
+    </scene>
+
+    <light name="sun" type="directional">
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>${sun[0]} ${sun[1]} ${sun[2]}</direction>
+      <cast_shadows>${'true' if shadows else 'false'}</cast_shadows>
+    </light>
+  </xacro:macro>
+
+</sdf>

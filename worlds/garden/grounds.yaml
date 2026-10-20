@@ -1,0 +1,45 @@
+# Grounds of the garden.
+#
+# texture - photo texture directory in worlds/media/textures
+# color   - RGB multiplied with the texture (optional, white by default)
+# tile    - real size of the area one texture repeat covers, m (see
+#           media/textures/CREDITS.md); scaled down with the world
+# mu      - friction coefficient for rubber wheels. The terrain height map
+#           has the grass friction (soil too); mud and the wheel tracks have
+#           collision meshes of their own with their friction (terrain.py).
+#
+# grass, soil and mud cover the garden in natural patches; track is the
+# worn wheel tracks of the field road, dirt with gravel (see terrain.py).
+# sand, gravel and rubble are not used yet.
+
+grass:
+  texture: ground_meadow
+  color: [0.82, 0.95, 0.62]
+  tile: 2.51
+  mu: 0.65
+soil:
+  texture: ground_loose_soil
+  tile: 2.0
+  mu: 0.7
+mud:
+  texture: ground_forest_mud
+  tile: 2.35
+  mu: 0.3
+track:
+  texture: road_gravel
+  color: [0.6, 0.57, 0.52]
+  tile: 3.0
+  mu: 0.85
+sand:
+  texture: ground_sand
+  tile: 1.5
+  mu: 0.5
+gravel:
+  texture: ground_gravel
+  color: [0.78, 0.76, 0.72]
+  tile: 2.0
+  mu: 0.7
+rubble:
+  texture: ground_rubble
+  tile: 1.5
+  mu: 0.9

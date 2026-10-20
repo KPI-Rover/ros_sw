@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<!--
+  Garden: rows of fruit trees on grass with patches of loose soil and mud,
+  pits and puddles, and a field road around, on uneven terrain.
+
+  The garden is modeled as a real place in real sizes, then the whole world
+  is scaled down to the robot, so the trees are 4 robot heights tall (see
+  garden/params.yaml).
+
+  The terrain is a height map (garden/terrain.py). The robot collides with the
+  height map itself and sees meshes of the same heights, one for each ground.
+  Grass tufts and the surroundings up to the horizon are only seen. World
+  axes: x east, y north.
+
+  Arguments are described in garden.world.yaml (types, ranges, meaning);
+  'terrain' is the terrain.yaml from garden/generator.py and 'layout' the
+  objects it scattered on the terrain, both set by the launch file.
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="relief" default="steppe"/>
+  <xacro:arg name="terrain_seed" default="11"/>
+  <xacro:arg name="grass" default="1.0"/>
+  <xacro:arg name="soil" default="0.13"/>
+  <xacro:arg name="mud" default="0.12"/>
+  <xacro:arg name="pits" default="true"/>
+  <xacro:arg name="puddles" default="true"/>
+  <xacro:arg name="tree_rows" default="6"/>
+  <xacro:arg name="grass_friction" default="0.65"/>
+  <xacro:arg name="mud_friction" default="0.3"/>
+  <xacro:arg name="track_friction" default="0.85"/>
+  <xacro:arg name="shadows" default="true"/>
+  <xacro:arg name="objects" default="0"/>
+  <xacro:arg name="objects_seed" default=""/>
+  <xacro:arg name="terrain" default=""/>
+  <xacro:arg name="layout" default=""/>
+
+  <xacro:include filename="include/common.xacro"/>
+  <xacro:include filename="include/structures.xacro"/>
+  <xacro:include filename="include/objects.xacro"/>
+
+  <xacro:property name="terrain" value="${xacro.load_yaml('$(arg terrain)')}"/>
+  <xacro:property name="scattered" value="${xacro.load_yaml('$(arg layout)')['objects'] if '$(arg layout)' else []}"/>
+
+  <!--
+    Visuals of the meshes k.. of a list of {name, mesh}, with their own glTF
+    materials. Grounds and grass cast no shadows: on this flat land they would
+    hardly show, but cost much rendering.
+  -->
+  <xacro:macro name="mesh_visuals" params="meshes k:=0">
+    <xacro:if value="${k &lt; len(meshes)}">
+      <visual name="${meshes[k]['name']}">
+        <cast_shadows>false</cast_shadows>
+        <visibility_flags>${visible_no_lidar}</visibility_flags>
+        <geometry>
+          <mesh>
+            <uri>${meshes[k]['mesh']}</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <xacro:mesh_visuals meshes="${meshes}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Visuals of the meshes k.. of a list of {name, mesh, texture, color}. -->
+  <xacro:macro name="ground_visuals" params="grounds k:=0">
+    <xacro:if value="${k &lt; len(grounds)}">
+      <visual name="ground_${grounds[k]['name']}">
+        <cast_shadows>false</cast_shadows>
+        <geometry>
+          <mesh>
+            <uri>${grounds[k]['mesh']}</uri>
+          </mesh>
+        </geometry>
+        <xacro:world_material color="${grounds[k]['color']}" texture="${grounds[k]['texture']}"/>
+      </visual>
+      <xacro:ground_visuals grounds="${grounds}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!--
+    Collision meshes of the grounds k.. with their own friction (mud, wheel
+    tracks): the same meshes the robot sees, 1 cm above the height map there.
+  -->
+  <xacro:macro name="ground_collisions" params="grounds k:=0">
+    <xacro:if value="${k &lt; len(grounds)}">
+      <xacro:if value="${grounds[k]['collision']}">
+        <collision name="ground_${grounds[k]['name']}">
+          <geometry>
+            <mesh>
+              <uri>${grounds[k]['mesh']}</uri>
+            </mesh>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>${grounds[k]['mu']}</mu>
+                <mu2>${grounds[k]['mu']}</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+      </xacro:if>
+      <xacro:ground_collisions grounds="${grounds}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Start points k.. of the terrain. -->
+  <xacro:macro name="start_points" params="points k:=0">
+    <xacro:if value="${k &lt; len(points)}">
+      <xacro:start_point name="${points[k]['name']}" x="${points[k]['x']}" y="${points[k]['y']}"
+          z="${points[k]['z']}" yaw="${points[k]['yaw']}"/>
+      <xacro:start_points points="${points}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Collisions of the tree stems k..: cylinders up to above the robot, where the crowns begin. -->
+  <xacro:macro name="stem_collisions" params="stems k:=0">
+    <xacro:if value="${k &lt; len(stems)}">
+      <xacro:property name="stem" value="${stems[k]}"/>
+      <collision name="stem_${k}">
+        <pose>${stem['x']} ${stem['y']} ${stem['z'] + stem_collision_height / 2} 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>${stem['radius']}</radius>
+            <length>${stem_collision_height}</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <xacro:stem_collisions stems="${stems}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+  <xacro:property name="stem_collision_height" value="0.45"/>
+
+  <!-- Visuals of the meshes k.. of a list of {name, mesh, texture, color}, casting shadows. -->
+  <xacro:macro name="solid_visuals" params="meshes k:=0">
+    <xacro:if value="${k &lt; len(meshes)}">
+      <visual name="${meshes[k]['name']}">
+        <geometry>
+          <mesh>
+            <uri>${meshes[k]['mesh']}</uri>
+          </mesh>
+        </geometry>
+        <xacro:world_material color="${meshes[k]['color']}" texture="${meshes[k]['texture']}"/>
+      </visual>
+      <xacro:solid_visuals meshes="${meshes}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <world name="garden">
+
+    <!-- Afternoon sun, low enough to show the relief. -->
+    <xacro:world_setup shadows="${'$(arg shadows)'.lower() in ('true', '1')}" skybox="true" ambient="0.35" sun="${[-0.65, 0.55, -0.45]}"/>
+
+    <model name="terrain">
+      <static>true</static>
+      <link name="link">
+        <!-- DART ignores the height map <pos>, so the collision pose lowers it to z_min. -->
+        <collision name="collision">
+          <pose>0 0 ${terrain['z_min']} 0 0 0</pose>
+          <geometry>
+            <heightmap>
+              <uri>${terrain['heightmap']}</uri>
+              <size>${terrain['size']} ${terrain['size']} ${terrain['z_max'] - terrain['z_min']}</size>
+            </heightmap>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>${terrain['mu']}</mu>
+                <mu2>${terrain['mu']}</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <xacro:ground_collisions grounds="${terrain['grounds']}"/>
+        <xacro:ground_visuals grounds="${terrain['grounds']}"/>
+        <!-- Water in the pits and puddles: only seen, the robot drives through it to the bottom. -->
+        <xacro:if value="${terrain['features']['water'] != ''}">
+          <visual name="water">
+            <cast_shadows>false</cast_shadows>
+            <visibility_flags>${visible_no_lidar}</visibility_flags>
+            <geometry>
+              <mesh>
+                <uri>${terrain['features']['water']}</uri>
+              </mesh>
+            </geometry>
+            <xacro:property name="water_color" value="${terrain['features']['water_color']}"/>
+            <material>
+              <ambient>${water_color[0]} ${water_color[1]} ${water_color[2]} 1</ambient>
+              <diffuse>${water_color[0]} ${water_color[1]} ${water_color[2]} 1</diffuse>
+              <specular>0.6 0.6 0.6 1</specular>
+              <pbr>
+                <metal>
+                  <metalness>0.0</metalness>
+                  <roughness>${terrain['features']['water_roughness']}</roughness>
+                </metal>
+              </pbr>
+            </material>
+          </visual>
+        </xacro:if>
+      </link>
+    </model>
+
+    <!-- Fruit trees in rows along x (garden/trees.py). -->
+    <model name="trees">
+      <static>true</static>
+      <link name="link">
+        <xacro:stem_collisions stems="${terrain['trees']['stems']}"/>
+        <xacro:solid_visuals meshes="${terrain['trees']['wood']}"/>
+        <!--
+          Leaves cast the crown shadows; the lidar doesn't draw them, they are
+          above its scan plane.
+        -->
+        <xacro:if value="${terrain['trees']['leaves'] != ''}">
+          <visual name="leaves">
+            <visibility_flags>${visible_no_lidar}</visibility_flags>
+            <geometry>
+              <mesh>
+                <uri>${terrain['trees']['leaves']}</uri>
+              </mesh>
+            </geometry>
+          </visual>
+        </xacro:if>
+      </link>
+    </model>
+
+    <!-- Grass; only seen by the camera, the robot drives through it and the lidar doesn't see it. -->
+    <model name="grass">
+      <static>true</static>
+      <link name="link">
+        <xacro:mesh_visuals meshes="${terrain['plants']}"/>
+      </link>
+    </model>
+
+    <!-- Surroundings up to the horizon; only seen, the robot can't drive there. -->
+    <model name="surroundings">
+      <static>true</static>
+      <link name="link">
+        <xacro:ground_visuals grounds="${terrain['surroundings']}"/>
+      </link>
+    </model>
+
+    <xacro:scatter_objects objects="${scattered}"/>
+
+    <xacro:start_points points="${terrain['start_points']}"/>
+
+  </world>
+</sdf>

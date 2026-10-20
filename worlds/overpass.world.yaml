@@ -1,0 +1,98 @@
+# Manifest of overpass.sdf.xacro for tools (see world_info.py).
+title: Overpass
+description: >-
+  A warehouse with a figure-eight marking and an overpass at the crossing: two
+  robots can drive the figure eight at the same time without meeting at the
+  intersection. Scattered objects around it.
+start_points:
+  a: Right loop
+  b: Left loop
+groups:
+  look: Look
+  route: Route
+  objects: Objects
+args:
+  floor: {type: choice, choices_from: floors, label: Floor, group: look}
+  marking: {type: choice, choices_from: markings, label: Route lines, description: Color and style of the figure-eight lines and the overpass marking., group: look}
+  wall_material: {type: choice, choices_from: walls, label: Warehouse walls, group: look}
+  lane:
+    type: choice
+    choices: [center, edges]
+    label: Lane marking
+    description: center — a line along the middle of the route; edges — lines along the lane edges, as wide as the overpass deck.
+    group: route
+  overpass:
+    type: choice
+    choices: [wide, narrow]
+    label: Overpass
+    description: wide — 0.7 m with railings; narrow — 0.4 m for one robot, without railings.
+    group: route
+  road:
+    type: choice
+    choices: [none, plain, concrete, painted_concrete, asphalt, carpet, wood, tiles]
+    label: Road surface
+    description: none — only the lines on the floor; or a road band of this surface along the figure eight.
+    group: route
+  overpass_surface: {type: choice, choices_from: floors, label: Overpass surface, group: route}
+  objects:
+    type: int
+    min: 0
+    max: 50
+    label: Objects
+    description: Number of boxes, crates, cones and other objects scattered around; some are low, under the lidar, and a flat board can be driven over.
+    group: objects
+  objects_on_route:
+    type: bool
+    label: Objects on the route
+    description: Also put objects on the figure eight, as obstacles to drive around; the overpass stays free.
+    group: objects
+  objects_seed:
+    type: string
+    label: Layout variant
+    description: A number selects the layout of the objects; empty — a new random one every time.
+    group: objects
+  layout: {internal: true}
+presets:
+  empty:
+    label: No objects
+    description: Only the figure eight and the overpass.
+    args: {objects: 0}
+  narrow:
+    label: Narrow overpass
+    description: The overpass for one robot, without railings.
+    args: {overpass: narrow}
+  lane_edges:
+    label: Lane edges
+    description: Lines along the lane edges instead of the middle.
+    args: {lane: edges}
+  obstacle_course:
+    label: Obstacle course
+    description: An asphalt road with objects on it to drive around.
+    args: {road: asphalt, objects_on_route: true, objects: 25}
+  crowded:
+    label: Crowded
+    description: Many objects around the route.
+    args: {objects: 45}
+previews:
+  # Pictures for tools, rendered by render_previews.py into overpass/previews/.
+  # Cameras: x, y, z (m), roll, pitch, yaw, horizontal fov (degrees).
+  cameras:
+    over: [-8.5, -6.5, 4.5, 0, 32, 38, 70]
+    high: [0, -7.5, 6.5, 0, 50, 90, 80]
+    bridge: [-2.2, -2.4, 1.0, 0, 18, 48, 62]
+    floor: [-3.5, -3.2, 1.6, 0, 30, 40, 60]
+    loop: [4.4, -2.6, 1.3, 0, 28, 45, 62]
+  world: over
+  presets: true
+  start_points: true
+  map: {center: [0, 0], size: 16}
+  args:
+    floor: {camera: floor, values: [plain, concrete, painted_concrete, asphalt, carpet, wood, tiles]}
+    marking: {camera: floor, values: [white, yellow, red, blue, green, yellow_black, red_white, black_white]}
+    wall_material: {camera: over, values: [plain, plaster, brick, concrete, wood, metal]}
+    lane: {camera: loop, values: [center, edges]}
+    overpass: {camera: bridge, values: [wide, narrow]}
+    overpass_surface: {camera: bridge, values: [plain, concrete, painted_concrete, asphalt, carpet, wood, tiles]}
+    road: {camera: over, values: [none, plain, concrete, painted_concrete, asphalt, carpet, wood, tiles]}
+    objects_on_route: {camera: over, values: [false, true], with: {objects_seed: 1, objects: 30}}
+    objects: {camera: over, values: [0, 14, 45], with: {objects_seed: 1}}

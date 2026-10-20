@@ -1,0 +1,139 @@
+<?xml version="1.0"?>
+<!--
+  Warehouse with a figure-eight marking and an overpass at its crossing.
+
+  The figure eight consists of two loops with radius R centered at (+-D, 0)
+  and two diagonals tangent to both loops, crossing at the origin at angles
+  +-alpha. The +alpha diagonal goes over the overpass, so two robots can drive
+  the figure eight at the same time without meeting at the crossing.
+
+  Start points 'a' and 'b' are at the outer points of the loops, half a lap
+  apart, heading along the route.
+
+  Arguments:
+    floor    - floor type from include/floors.yaml
+    marking  - marking style from include/markings.yaml
+    lane     - 'center': a line along the route center;
+               'edges': lines along both lane edges, the lane is as wide as
+               the overpass driveway
+    overpass - 'wide': 0.7 m wide with rails;
+               'narrow': 0.4 m wide for one robot, without rails
+    overpass_surface - overpass driving surface, a floor type from include/floors.yaml
+    wall_material    - warehouse wall material from include/walls.yaml
+    objects          - number of objects (items and traffic cones) scattered over the
+                       free area (not on the figure eight, the overpass or start points)
+    objects_seed     - seed of the object placement; empty for a new random one
+    objects_on_route - also scatter objects on the figure eight, as obstacles: true or false
+    road             - 'none', or a floor type from include/floors.yaml for a road band along
+                       the figure eight (a mesh from overpass/generator.py)
+    layout           - scattered objects from overpass/generator.py; set by the launch file
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="floor" default="concrete"/>
+  <xacro:arg name="marking" default="yellow_black"/>
+  <xacro:arg name="lane" default="center"/>
+  <xacro:arg name="overpass" default="wide"/>
+  <xacro:arg name="overpass_surface" default="asphalt"/>
+  <xacro:arg name="wall_material" default="concrete"/>
+  <xacro:arg name="objects" default="14"/>
+  <xacro:arg name="objects_seed" default=""/>
+  <xacro:arg name="objects_on_route" default="false"/>
+  <xacro:arg name="road" default="none"/>
+  <xacro:arg name="layout" default=""/>
+
+  <xacro:include filename="include/common.xacro"/>
+  <xacro:include filename="include/floor.xacro"/>
+  <xacro:include filename="include/marking.xacro"/>
+  <xacro:include filename="include/structures.xacro"/>
+  <xacro:include filename="include/objects.xacro"/>
+
+  <!-- Geometry shared with overpass/generator.py. -->
+  <xacro:property name="params" value="${xacro.load_yaml('$(find kpi_rover)/worlds/overpass/params.yaml')}"/>
+  <xacro:property name="size_x" value="${params['size_x']}"/>
+  <xacro:property name="size_y" value="${params['size_y']}"/>
+  <xacro:property name="w" value="${params['marking_width']}"/>
+
+  <!-- Figure eight. -->
+  <xacro:property name="R" value="${params['loop_radius']}"/>
+  <xacro:property name="Lt" value="${params['tangent_distance']}"/>
+  <xacro:property name="D" value="${sqrt(Lt ** 2 + R ** 2)}"/>
+  <xacro:property name="alpha" value="${atan2(R, Lt)}"/>
+  <xacro:property name="ca" value="${cos(alpha)}"/>
+  <xacro:property name="sa" value="${sin(alpha)}"/>
+
+  <!-- Overpass. -->
+  <xacro:property name="overpass_cfg" value="${params['overpass_types']['$(arg overpass)']}"/>
+  <xacro:property name="rail_width" value="${params['rail_width']}"/>
+  <xacro:property name="driveway" value="${overpass_cfg['width'] - (2 * rail_width if overpass_cfg['rails'] else 0)}"/>
+  <xacro:property name="H" value="${params['height']}"/>
+  <xacro:property name="deck_length" value="${params['deck_length']}"/>
+  <xacro:property name="max_slope" value="${params['max_slope']}"/>
+  <!-- Distance along the overpass diagonal from the crossing to the ramp foot. -->
+  <xacro:property name="s_foot" value="${deck_length / 2 + H * pi / (2 * tan(radians(max_slope)))}"/>
+
+  <!-- Lane marking lines offsets from the route center; edge lines lie inside the overpass driveway. -->
+  <xacro:property name="lanes" value="${dict(center=[0], edges=[-(driveway - w) / 2, (driveway - w) / 2])}"/>
+  <xacro:property name="offsets" value="${lanes['$(arg lane)']}"/>
+
+  <!-- Scattered objects from overpass/generator.py, if the world is processed by the launch file. -->
+  <xacro:property name="overpass_layout" value="${xacro.load_yaml('$(arg layout)') if '$(arg layout)' else dict()}"/>
+  <xacro:property name="scattered" value="${overpass_layout.get('objects', [])}"/>
+  <!-- Walls with their textures at the real size (overpass/generator.py, lib/textured_box.py). -->
+  <xacro:property name="wall_meshes" value="${overpass_layout.get('meshes', dict())}"/>
+  <xacro:property name="floors_cfg" value="${xacro.load_yaml('$(find kpi_rover)/worlds/include/floors.yaml')}"/>
+
+  <world name="overpass">
+
+    <xacro:world_setup/>
+
+    <xacro:floor type="$(arg floor)" size_x="${size_x}" size_y="${size_y}"/>
+    <xacro:perimeter_walls size_x="${size_x}" size_y="${size_y}" material="$(arg wall_material)"/>
+
+    <!-- Upper diagonal over the overpass, with its marking on the ramps and the deck. -->
+    <xacro:overpass name="overpass" cx="0" cy="0" yaw="${alpha}" style="$(arg marking)" offsets="${offsets}" surface="$(arg overpass_surface)"
+        height="${H}" deck_length="${deck_length}" max_slope="${max_slope}"
+        width="${overpass_cfg['width']}" rails="${overpass_cfg['rails']}" rail_width="${rail_width}" marking_width="${w}"/>
+
+    <xacro:if value="${'road' in overpass_layout}">
+      <!-- Road band along the figure eight, under its marking. -->
+      <model name="figure_eight_road">
+        <static>true</static>
+        <link name="link">
+          <visual name="road">
+            <geometry><mesh><uri>file://${overpass_layout['road']['mesh']}</uri></mesh></geometry>
+            <xacro:world_material color="${floors_cfg[overpass_layout['road']['surface']]['color']}"
+                texture="${floors_cfg[overpass_layout['road']['surface']]['texture']}"/>
+          </visual>
+        </link>
+      </model>
+    </xacro:if>
+
+    <model name="figure_eight_marking">
+      <static>true</static>
+      <link name="link">
+        <xacro:lane_arc name="loop_right" cx="${D}" cy="0" r="${R}" a1="${-(pi / 2 + alpha)}" a2="${pi / 2 + alpha}"
+            offsets="${offsets}" style="$(arg marking)" width="${w}"/>
+        <xacro:lane_arc name="loop_left" cx="${-D}" cy="0" r="${R}" a1="${pi / 2 - alpha}" a2="${3 * pi / 2 + alpha}"
+            offsets="${offsets}" style="$(arg marking)" width="${w}"/>
+
+        <!-- Lower diagonal, on the floor under the overpass. -->
+        <xacro:lane_line name="diagonal_lower" x1="${-Lt * ca}" y1="${Lt * sa}" x2="${Lt * ca}" y2="${-Lt * sa}"
+            offsets="${offsets}" style="$(arg marking)" width="${w}"/>
+
+        <!-- Upper diagonal on the floor before and after the overpass. -->
+        <xacro:lane_line name="diagonal_upper_in" x1="${-Lt * ca}" y1="${-Lt * sa}" x2="${-s_foot * ca}" y2="${-s_foot * sa}"
+            offsets="${offsets}" style="$(arg marking)" width="${w}"/>
+        <xacro:lane_line name="diagonal_upper_out" x1="${s_foot * ca}" y1="${s_foot * sa}" x2="${Lt * ca}" y2="${Lt * sa}"
+            offsets="${offsets}" style="$(arg marking)" width="${w}"/>
+      </link>
+    </model>
+
+    <!-- The right loop is driven counterclockwise and the left one clockwise, both heading +Y at the outer points. -->
+    <xacro:scatter_objects objects="${scattered}"/>
+
+    <xacro:start_point name="a" x="${D + R}" y="0" yaw="${pi / 2}"/>
+    <xacro:start_point name="b" x="${-(D + R)}" y="0" yaw="${pi / 2}"/>
+
+  </world>
+</sdf>

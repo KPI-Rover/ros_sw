@@ -1,0 +1,38 @@
+# Wall materials available for walls built with the 'wall' macro (structures.xacro).
+#
+# texture - photo texture directory in worlds/media/textures (see
+#           tools/assets/fetch_textures.py and textures/CREDITS.md), made for walls
+#           0.5 m high. Empty for a plain colored wall.
+# color   - RGB color; multiplied with the texture when it is set.
+# segment - length of wall one texture covers, m; walls are built of
+#           segments about this long.
+
+plain:
+  texture: ''
+  color: [0.85, 0.85, 0.82]
+  segment: 1.0
+
+plaster:
+  texture: wall_plaster
+  color: [1.0, 1.0, 1.0]
+  segment: 2.0
+
+brick:
+  texture: wall_brick
+  color: [1.0, 1.0, 1.0]
+  segment: 1.0
+
+concrete:
+  texture: wall_concrete
+  color: [1.0, 1.0, 1.0]
+  segment: 2.16
+
+wood:
+  texture: wall_wood
+  color: [1.0, 1.0, 1.0]
+  segment: 1.5
+
+metal:
+  texture: wall_metal
+  color: [1.0, 1.0, 1.0]
+  segment: 1.12

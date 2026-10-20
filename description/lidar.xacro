@@ -66,6 +66,12 @@
                 <stddev>0.01</stddev>
             </noise>
             <frame_id>laser_frame</frame_id>
+            <!--
+              Hide world visuals meant only for the Gazebo GUI (bit 1) and
+              visuals the lidar must not see, such as grass (bit 2); see
+              worlds/include/common.xacro.
+            -->
+            <visibility_mask>4294967289</visibility_mask>
         </lidar>
         <always_on>1</always_on>
         <visualize>true</visualize>

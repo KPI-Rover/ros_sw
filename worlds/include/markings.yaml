@@ -1,0 +1,38 @@
+# Marking styles available in worlds built with the 'marking_line' macro (marking.xacro).
+#
+# texture - file from worlds/media/textures with a stripe pattern. One texture
+#           covers a segment 4 line widths long and is repeated along the line.
+#           Empty for a solid colored line.
+# color   - RGB color; multiplied with the texture when it is set.
+
+white:
+  texture: ''
+  color: [1.0, 1.0, 1.0]
+
+yellow:
+  texture: ''
+  color: [1.0, 0.8, 0.0]
+
+red:
+  texture: ''
+  color: [0.85, 0.05, 0.05]
+
+blue:
+  texture: ''
+  color: [0.1, 0.3, 0.9]
+
+green:
+  texture: ''
+  color: [0.0, 0.8, 0.0]
+
+yellow_black:
+  texture: marking_yellow_black.png
+  color: [1.0, 1.0, 1.0]
+
+red_white:
+  texture: marking_red_white.png
+  color: [1.0, 1.0, 1.0]
+
+black_white:
+  texture: marking_black_white.png
+  color: [1.0, 1.0, 1.0]

@@ -1,0 +1,22 @@
+# Manifest of test_square.sdf.xacro for tools (see world_info.py).
+title: Test square
+description: A 1×1 m square marked on the floor to check motion and odometry accuracy.
+start_points:
+  a: Square corner
+args:
+  floor: {type: choice, choices_from: floors, label: Floor}
+  marking: {type: choice, choices_from: markings, label: Marking}
+previews:
+  # Pictures for tools, rendered by render_previews.py into test_square/previews/.
+  # Cameras: x, y, z (m), roll, pitch, yaw, horizontal fov (degrees).
+  cameras:
+    over: [-1.1, -1.1, 1.2, 0, 32, 45, 62]
+  world: over
+  start_points: true
+  map: {center: [0.5, 0.5], size: 4}
+  # Every floor with every marking: the floors without the square and the
+  # markings cut out on contrasting floors, put together by tools.
+  layers:
+    camera: over
+    base: {arg: floor, values: [plain, concrete, painted_concrete, asphalt, carpet, wood, tiles], hide: [square_marking]}
+    overlay: {arg: marking, values: [white, yellow, red, blue, green, yellow_black, red_white, black_white], against: [plain, asphalt]}

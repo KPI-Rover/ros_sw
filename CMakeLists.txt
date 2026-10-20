@@ -174,6 +174,9 @@ install(
 install(
   DIRECTORY config description executables launch params worlds maps scripts
   DESTINATION share/${PROJECT_NAME}
+  # One-off scripts that made the world media; not needed to run the worlds.
+  PATTERN "worlds/tools/assets" EXCLUDE
+  PATTERN "__pycache__" EXCLUDE
 )
 
 # Install the ECU bridge library

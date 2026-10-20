@@ -1,0 +1,354 @@
+<?xml version="1.0"?>
+<!--
+  Static structures for worlds: textured walls, perimeter walls, an overpass with smooth
+  ramps, optional rails and its own marking, wall openings (arches and
+  doorways) and robot start points.
+
+  Usage:
+    <xacro:wall name="wall" x="0" y="0" yaw="0" length="3" material="brick"/>
+    <xacro:perimeter_walls size_x="15" size_y="8" material="concrete"/>
+    <xacro:overpass name="bridge" cx="0" cy="0" yaw="0.5" style="white" offsets="${[0]}"/>
+    <xacro:arch name="arch" x="0" y="1" yaw="0" span="0.65" width="0.45" height="0.42"/>
+    <xacro:start_point name="a" x="1" y="2" yaw="${pi / 2}"/>
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="common.xacro"/>
+  <xacro:include filename="marking.xacro"/>
+  <xacro:include filename="floor.xacro"/>
+
+  <xacro:property name="walls_cfg" value="${xacro.load_yaml('$(find kpi_rover)/worlds/include/walls.yaml')}"/>
+  <xacro:property name="structure_color" value="${[0.55, 0.55, 0.55]}"/>
+  <xacro:property name="rail_color" value="${[1.0, 0.8, 0.0]}"/>
+  <xacro:property name="arch_color" value="${[0.55, 0.42, 0.3]}"/>
+  <!--
+    Textured box meshes {key: OBJ path} made by the world generator (see
+    lib/textured_box.py): walls and arch parts with a mesh show their
+    texture at its real size; the others are built of box segments. A world
+    sets it after including this file.
+  -->
+  <xacro:property name="wall_meshes" value="${dict()}"/>
+
+  <!--
+    Box with matching collision and visual.
+
+    'view' sets how the Gazebo GUI shows the box; the robot always collides
+    with it and its sensors always see it:
+      solid       - as is;
+      transparent - semi-transparent;
+      hidden      - not shown;
+      marking     - as its footprint on the floor, 'footprint_scale' times as
+                    wide across (local Y).
+  -->
+  <!-- Box geometry: a textured box mesh (see wall_meshes), or a box primitive without one. -->
+  <xacro:macro name="box_geometry" params="sx sy sz mesh">
+    <xacro:if value="${mesh != ''}">
+      <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+    </xacro:if>
+    <xacro:unless value="${mesh != ''}">
+      <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+    </xacro:unless>
+  </xacro:macro>
+
+  <xacro:macro name="solid_box" params="name x y z sx sy sz color texture:='' mesh:='' pitch:=0 yaw:=0 view:=solid footprint_scale:=1">
+    <collision name="${name}_collision">
+      <pose>${x} ${y} ${z} 0 ${pitch} ${yaw}</pose>
+      <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+    </collision>
+    <visual name="${name}_visual">
+      <pose>${x} ${y} ${z} 0 ${pitch} ${yaw}</pose>
+      <xacro:box_geometry sx="${sx}" sy="${sy}" sz="${sz}" mesh="${mesh}"/>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <xacro:if value="${view != 'solid'}">
+        <visibility_flags>${visible_robot_only}</visibility_flags>
+      </xacro:if>
+    </visual>
+    <xacro:if value="${view == 'transparent'}">
+      <visual name="${name}_gui_visual">
+        <pose>${x} ${y} ${z} 0 ${pitch} ${yaw}</pose>
+        <xacro:box_geometry sx="${sx}" sy="${sy}" sz="${sz}" mesh="${mesh}"/>
+        <xacro:world_material color="${color}" texture="${texture}"/>
+        <transparency>0.7</transparency>
+        <visibility_flags>${visible_gui_only}</visibility_flags>
+      </visual>
+    </xacro:if>
+    <xacro:if value="${view == 'marking'}">
+      <visual name="${name}_footprint">
+        <pose>${x} ${y} 0.0015 0 0 ${yaw}</pose>
+        <geometry><box><size>${sx} ${sy * footprint_scale} 0.001</size></box></geometry>
+        <xacro:world_material color="${color}" texture=""/>
+        <visibility_flags>${visible_gui_only}</visibility_flags>
+      </visual>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Visual segments k..n-1 of a wall, see 'wall'. -->
+  <xacro:macro name="wall_segments" params="name k n x y yaw length height thickness color texture flags transparency:=0">
+    <xacro:property name="s" value="${length * ((k + 0.5) / n - 0.5)}"/>
+    <visual name="${name}_${k}">
+      <pose>${x + s * cos(yaw)} ${y + s * sin(yaw)} ${height / 2} 0 0 ${yaw}</pose>
+      <geometry><box><size>${length / n} ${thickness} ${height}</size></box></geometry>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <xacro:if value="${transparency > 0}">
+        <transparency>${transparency}</transparency>
+      </xacro:if>
+      <visibility_flags>${flags}</visibility_flags>
+    </visual>
+    <xacro:if value="${k + 1 &lt; n}">
+      <xacro:wall_segments name="${name}" k="${k + 1}" n="${n}" x="${x}" y="${y}" yaw="${yaw}" length="${length}" height="${height}"
+          thickness="${thickness}" color="${color}" texture="${texture}" flags="${flags}" transparency="${transparency}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!--
+    Wall along local X, centered at (x, y) on the floor and rotated by 'yaw',
+    with a 'material' from walls.yaml. The world generator can give it a
+    textured box mesh (wall_meshes), which keeps the texture at its real
+    size; without one, as a box maps a texture onto its whole face, the
+    visible wall is built of segments about as long as the texture covers
+    ('segment' in walls.yaml). The collision is one box.
+    'view' sets how the Gazebo GUI shows the wall, see solid_box.
+  -->
+  <xacro:macro name="wall" params="name x y yaw length height:=0.5 thickness:=0.05 material:=plain view:=solid">
+    <xacro:property name="wall_cfg" value="${walls_cfg[material]}"/>
+    <xacro:property name="mesh" value="${wall_meshes.get('%.4fx%.4fx%.4f@%.4f/%s' % (length, thickness, height, 0, material), '')}"/>
+    <xacro:property name="n" value="${1 if wall_cfg['texture'] == '' or mesh != '' else max(1, int(round(length / wall_cfg['segment'])))}"/>
+    <collision name="${name}_collision">
+      <pose>${x} ${y} ${height / 2} 0 0 ${yaw}</pose>
+      <geometry><box><size>${length} ${thickness} ${height}</size></box></geometry>
+    </collision>
+    <xacro:if value="${mesh != ''}">
+      <visual name="${name}">
+        <pose>${x} ${y} ${height / 2} 0 0 ${yaw}</pose>
+        <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+        <xacro:world_material color="${wall_cfg['color']}" texture="${wall_cfg['texture']}"/>
+        <visibility_flags>${visible_all if view == 'solid' else visible_robot_only}</visibility_flags>
+      </visual>
+      <xacro:if value="${view == 'transparent'}">
+        <visual name="${name}_gui">
+          <pose>${x} ${y} ${height / 2} 0 0 ${yaw}</pose>
+          <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+          <xacro:world_material color="${wall_cfg['color']}" texture="${wall_cfg['texture']}"/>
+          <transparency>0.35</transparency>
+          <visibility_flags>${visible_gui_only}</visibility_flags>
+        </visual>
+      </xacro:if>
+    </xacro:if>
+    <xacro:unless value="${mesh != ''}">
+      <xacro:wall_segments name="${name}" k="0" n="${n}" x="${x}" y="${y}" yaw="${yaw}" length="${length}" height="${height}"
+          thickness="${thickness}" color="${wall_cfg['color']}" texture="${wall_cfg['texture']}"
+          flags="${visible_all if view == 'solid' else visible_robot_only}"/>
+      <xacro:if value="${view == 'transparent'}">
+        <xacro:wall_segments name="${name}_gui" k="0" n="${n}" x="${x}" y="${y}" yaw="${yaw}" length="${length}" height="${height}"
+            thickness="${thickness}" color="${wall_cfg['color']}" texture="${wall_cfg['texture']}" flags="${visible_gui_only}"
+            transparency="0.35"/>
+      </xacro:if>
+    </xacro:unless>
+    <xacro:if value="${view == 'marking'}">
+      <visual name="${name}_footprint">
+        <pose>${x} ${y} 0.0015 0 0 ${yaw}</pose>
+        <geometry><box><size>${length} ${thickness} 0.001</size></box></geometry>
+        <xacro:world_material color="${walls_cfg['plain']['color']}" texture=""/>
+        <visibility_flags>${visible_gui_only}</visibility_flags>
+      </visual>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Walls around a size_x x size_y area centered at the origin. -->
+  <xacro:macro name="perimeter_walls" params="size_x size_y height:=0.5 thickness:=0.1 material:=plain">
+    <model name="perimeter_walls">
+      <static>true</static>
+      <link name="link">
+        <xacro:wall name="north" x="0" y="${(size_y + thickness) / 2}" yaw="0" length="${size_x + 2 * thickness}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+        <xacro:wall name="south" x="0" y="${-(size_y + thickness) / 2}" yaw="${pi}" length="${size_x + 2 * thickness}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+        <xacro:wall name="east" x="${(size_x + thickness) / 2}" y="0" yaw="${pi / 2}" length="${size_y}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+        <xacro:wall name="west" x="${-(size_x + thickness) / 2}" y="0" yaw="${-pi / 2}" length="${size_y}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <!-- Marking lines i..len(offsets)-1 from (x1, offset, z1) to (x2, offset, z2). -->
+  <xacro:macro name="offset_marking_lines" params="name i offsets x1 z1 x2 z2 style width fine:=False">
+    <xacro:marking_line name="${name}_${i}" x1="${x1}" y1="${offsets[i]}" z1="${z1}" x2="${x2}" y2="${offsets[i]}" z2="${z2}"
+        style="${style}" width="${width}" fine="${fine}"/>
+    <xacro:if value="${i + 1 &lt; len(offsets)}">
+      <xacro:offset_marking_lines name="${name}" i="${i + 1}" offsets="${offsets}" x1="${x1}" z1="${z1}" x2="${x2}" z2="${z2}"
+          style="${style}" width="${width}" fine="${fine}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!--
+    Pieces k..n-1 of an overpass ramp profile, from local X = 'dir * foot'
+    (ground) towards the deck by 'length'; 'dir' is -1 for the entry ramp and
+    1 for the exit ramp. Emits rails ('rails') or marking lines ('offsets').
+  -->
+  <xacro:macro name="ramp_pieces" params="name k n dir foot length height rails:=False rail_y:=0 rail_height:=0 rail_width:=0
+                                           offsets:=${[]} style:=white marking_width:=0.05">
+    <xacro:property name="xa" value="${dir * (foot - length * k / n)}"/>
+    <xacro:property name="xb" value="${dir * (foot - length * (k + 1) / n)}"/>
+    <xacro:property name="za" value="${height * (1 - cos(pi * k / n)) / 2}"/>
+    <xacro:property name="zb" value="${height * (1 - cos(pi * (k + 1) / n)) / 2}"/>
+
+    <xacro:if value="${rails}">
+      <xacro:property name="piece_length" value="${sqrt((xb - xa) ** 2 + (zb - za) ** 2)}"/>
+      <xacro:property name="piece_pitch" value="${-atan2(zb - za, xb - xa)}"/>
+      <!-- Rails are lengthened by half their height so they have no gaps where the slope changes. -->
+      <xacro:solid_box name="${name}_rail_left_${k}" x="${(xa + xb) / 2}" y="${rail_y}" z="${(za + zb) / 2 + rail_height / 2}"
+          sx="${piece_length + rail_height / 2}" sy="${rail_width}" sz="${rail_height}" color="${rail_color}" pitch="${piece_pitch}"/>
+      <xacro:solid_box name="${name}_rail_right_${k}" x="${(xa + xb) / 2}" y="${-rail_y}" z="${(za + zb) / 2 + rail_height / 2}"
+          sx="${piece_length + rail_height / 2}" sy="${rail_width}" sz="${rail_height}" color="${rail_color}" pitch="${piece_pitch}"/>
+    </xacro:if>
+    <xacro:if value="${len(offsets) > 0}">
+      <xacro:offset_marking_lines name="${name}_marking_${k}" i="0" offsets="${offsets}" x1="${xa}" z1="${za}" x2="${xb}" z2="${zb}"
+          style="${style}" width="${marking_width}" fine="True"/>
+    </xacro:if>
+
+    <xacro:if value="${k + 1 &lt; n}">
+      <xacro:ramp_pieces name="${name}" k="${k + 1}" n="${n}" dir="${dir}" foot="${foot}" length="${length}" height="${height}"
+          rails="${rails}" rail_y="${rail_y}" rail_height="${rail_height}" rail_width="${rail_width}"
+          offsets="${offsets}" style="${style}" marking_width="${marking_width}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!--
+    Overpass along local X centered at (cx, cy) and rotated by 'yaw': a deck at
+    'height' with a smooth ramp at each end, optional rails along both edges
+    and marking lines at lateral 'offsets' from its axis. 'width' is the full
+    width including rails, 'max_slope' is the steepest ramp angle in degrees
+    and 'surface' is a floor type from floors.yaml for the driving surface.
+    The overpass spans 'deck_length / 2 + ramp_length' from its center each way,
+    where ramp_length = height * pi / (2 * tan(max_slope)).
+
+    The body mesh is generated by tools/assets/gen_media.py for each size listed in
+    its OVERPASSES; add the size there for other parameters.
+  -->
+  <xacro:macro name="overpass" params="name cx cy yaw style offsets surface:=asphalt height:=0.45 deck_length:=1.4 max_slope:=12
+                                        width:=0.7 rails:=True marking_width:=0.05 deck_thickness:=0.05
+                                        rail_height:=0.1 rail_width:=0.04 rail_pieces:=16">
+    <xacro:property name="ramp_length" value="${height * pi / (2 * tan(radians(max_slope)))}"/>
+    <xacro:property name="half" value="${deck_length / 2}"/>
+    <xacro:property name="foot" value="${half + ramp_length}"/>
+    <xacro:property name="rail_y" value="${(width - rail_width) / 2}"/>
+    <xacro:property name="surface_cfg" value="${floors[surface]}"/>
+    <xacro:property name="mesh"
+        value="${meshes_dir}/overpass_w${'%g' % width}_h${'%g' % height}_d${'%g' % deck_length}_t${'%g' % deck_thickness}_s${'%g' % max_slope}.obj"/>
+    <!-- Marking follows the ramp in pieces about 1 width long, so it stays on the curved surface. -->
+    <xacro:property name="marking_pieces" value="${int(round(ramp_length / marking_width))}"/>
+
+    <model name="${name}">
+      <static>true</static>
+      <pose>${cx} ${cy} 0 0 0 ${yaw}</pose>
+      <link name="link">
+        <collision name="body_collision">
+          <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>${surface_cfg['mu']}</mu>
+                <mu2>${surface_cfg['mu']}</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="body_visual">
+          <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+          <xacro:world_material color="${surface_cfg['color']}" texture="${surface_cfg['texture']}"/>
+        </visual>
+
+        <xacro:if value="${rails}">
+          <xacro:solid_box name="deck_rail_left" x="0" y="${rail_y}" z="${height + rail_height / 2}"
+              sx="${deck_length}" sy="${rail_width}" sz="${rail_height}" color="${rail_color}"/>
+          <xacro:solid_box name="deck_rail_right" x="0" y="${-rail_y}" z="${height + rail_height / 2}"
+              sx="${deck_length}" sy="${rail_width}" sz="${rail_height}" color="${rail_color}"/>
+          <xacro:ramp_pieces name="ramp_in" k="0" n="${rail_pieces}" dir="-1" foot="${foot}" length="${ramp_length}" height="${height}"
+              rails="True" rail_y="${rail_y}" rail_height="${rail_height}" rail_width="${rail_width}"/>
+          <xacro:ramp_pieces name="ramp_out" k="0" n="${rail_pieces}" dir="1" foot="${foot}" length="${ramp_length}" height="${height}"
+              rails="True" rail_y="${rail_y}" rail_height="${rail_height}" rail_width="${rail_width}"/>
+        </xacro:if>
+
+        <xacro:offset_marking_lines name="deck_marking" i="0" offsets="${offsets}" x1="${-half}" z1="${height}" x2="${half}" z2="${height}"
+            style="${style}" width="${marking_width}"/>
+        <xacro:ramp_pieces name="ramp_in" k="0" n="${marking_pieces}" dir="-1" foot="${foot}" length="${ramp_length}" height="${height}"
+            offsets="${offsets}" style="${style}" marking_width="${marking_width}"/>
+        <xacro:ramp_pieces name="ramp_out" k="0" n="${marking_pieces}" dir="1" foot="${foot}" length="${ramp_length}" height="${height}"
+            offsets="${offsets}" style="${style}" marking_width="${marking_width}"/>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <!--
+    Opening in a wall segment 'span' long along local X at (x, y) rotated by
+    'yaw': posts on both sides leave a 'width' wide opening, and a lintel above
+    'height' closes it up to 'wall_height'. 'height' 0 makes a doorway without
+    a lintel. 'view' is the GUI view of its parts, see solid_box; as marking,
+    the lintel is a thin line across the opening. 'material' is a wall
+    material from walls.yaml, or 'contrast' for a plain color that stands out
+    from the walls.
+  -->
+  <xacro:macro name="arch" params="name x y yaw span width height wall_height:=0.5 thickness:=0.05 view:=solid material:=contrast">
+    <xacro:property name="post" value="${(span - width) / 2}"/>
+    <xacro:property name="arch_rgb" value="${arch_color if material == 'contrast' else walls_cfg[material]['color']}"/>
+    <xacro:property name="arch_texture" value="${'' if material == 'contrast' else walls_cfg[material]['texture']}"/>
+    <xacro:property name="post_mesh" value="${wall_meshes.get('%.4fx%.4fx%.4f@%.4f/%s' % (post, thickness, wall_height, 0, material), '')}"/>
+    <xacro:property name="lintel_mesh" value="${wall_meshes.get('%.4fx%.4fx%.4f@%.4f/%s' % (width, thickness, wall_height - height, height, material), '')}"/>
+    <model name="${name}">
+      <static>true</static>
+      <pose>${x} ${y} 0 0 0 ${yaw}</pose>
+      <link name="link">
+        <xacro:if value="${post > 0}">
+          <xacro:solid_box name="post_left" x="${-(width + post) / 2}" y="0" z="${wall_height / 2}"
+              sx="${post}" sy="${thickness}" sz="${wall_height}" color="${arch_rgb}" texture="${arch_texture}" mesh="${post_mesh}" view="${view}"/>
+          <xacro:solid_box name="post_right" x="${(width + post) / 2}" y="0" z="${wall_height / 2}"
+              sx="${post}" sy="${thickness}" sz="${wall_height}" color="${arch_rgb}" texture="${arch_texture}" mesh="${post_mesh}" view="${view}"/>
+        </xacro:if>
+        <xacro:if value="${height > 0}">
+          <xacro:solid_box name="lintel" x="0" y="0" z="${(height + wall_height) / 2}"
+              sx="${width}" sy="${thickness}" sz="${wall_height - height}" color="${arch_rgb}" texture="${arch_texture}" mesh="${lintel_mesh}" view="${view}" footprint_scale="0.3"/>
+        </xacro:if>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <!--
+    Named robot start point: a footprint outline with a heading arrow beside it.
+    Shown only in the Gazebo GUI, the robot camera does not see it. The launch
+    file finds start points by the 'start_point_' model name prefix and spawns
+    the robot at the selected one ('start' argument). 'z' is the ground height
+    there, for uneven ground.
+  -->
+  <xacro:macro name="start_point" params="name x y yaw z:=0">
+    <model name="start_point_${name}">
+      <static>true</static>
+      <pose>${x} ${y} ${z + 0.001} 0 0 ${yaw}</pose>
+      <link name="link">
+        <xacro:marking_line name="outline_front" x1="0.15" y1="-0.15" x2="0.15" y2="0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="outline_left" x1="0.15" y1="0.15" x2="-0.15" y2="0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="outline_back" x1="-0.15" y1="0.15" x2="-0.15" y2="-0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="outline_right" x1="-0.15" y1="-0.15" x2="0.15" y2="-0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="arrow_shaft" x1="-0.15" y1="-0.25" x2="0.15" y2="-0.25" style="green" width="0.02"
+            visibility="${visible_gui_only}"/>
+        <visual name="arrow_head">
+          <geometry>
+            <polyline>
+              <point>0.15 -0.31</point>
+              <point>0.27 -0.25</point>
+              <point>0.15 -0.19</point>
+              <height>0.001</height>
+            </polyline>
+          </geometry>
+          <xacro:world_material color="${markings['green']['color']}" texture=""/>
+          <visibility_flags>${visible_gui_only}</visibility_flags>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+</sdf>

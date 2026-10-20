@@ -1,0 +1,8 @@
+# Manifest of industrial-warehouse.sdf for tools (see world_info.py).
+title: Industrial warehouse
+description: A warehouse with shelves (Gazebo Fuel models); the default world.
+previews:
+  cameras:
+    over: [0, -10.2, 2.4, 0, 14, 90, 80]
+  world: over
+  map: {center: [0, 0], size: 22}

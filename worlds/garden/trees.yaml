@@ -1,0 +1,30 @@
+# Tree models for the garden, written by convert_trees.py and make_trees.py (real sizes, m).
+models:
+  apple_1:
+    wood: models/apple_1/apple_1_wood.gltf
+    leaves: models/apple_1/apple_1_leaves.yaml
+    source: make_trees.py (Sapling Tree Gen)
+    stem_radius: 0.134
+    triangles: 6000
+    cards: 959
+  apple_2:
+    wood: models/apple_2/apple_2_wood.gltf
+    leaves: models/apple_2/apple_2_leaves.yaml
+    source: make_trees.py (Sapling Tree Gen)
+    stem_radius: 0.1
+    triangles: 5952
+    cards: 961
+  apple_3:
+    wood: models/apple_3/apple_3_wood.gltf
+    leaves: models/apple_3/apple_3_leaves.yaml
+    source: make_trees.py (Sapling Tree Gen)
+    stem_radius: 0.124
+    triangles: 6160
+    cards: 953
+  apple_4:
+    wood: models/apple_4/apple_4_wood.gltf
+    leaves: models/apple_4/apple_4_leaves.yaml
+    source: make_trees.py (Sapling Tree Gen)
+    stem_radius: 0.118
+    triangles: 7136
+    cards: 953

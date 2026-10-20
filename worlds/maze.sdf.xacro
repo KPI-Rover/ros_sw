@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<!--
+  Warehouse with a maze. Mazes have walls, passable doorways and arches,
+  some of them a tight fit, and impassable arches: too narrow, or too low
+  (looks free to the lidar but the robot hits the lintel with its top).
+
+  The maze layout is built by maze/generator.py, which the launch file runs
+  before processing this world and passes the layout file as 'layout'. Mazes
+  are fixed levels from maze/levels or random ones (see generator.py).
+
+  Start points: 'a' outside the entrance and 'b' outside the exit, both facing
+  into the maze. The shortest route between them is drawn as a blue line
+  seen only in the Gazebo GUI.
+
+  Arguments:
+    floor      - floor type from include/floors.yaml
+    wall_material - maze and warehouse wall material from include/walls.yaml
+    arch_material - material of the arches and narrow openings: 'contrast'
+                 (a plain color that stands out) or one from include/walls.yaml
+    maze       - fixed level (level1, level2, level3) or 'random'
+    seed       - random maze seed, the same seed gives the same maze
+    difficulty - random maze difficulty: easy, medium, hard
+    wall_view  - how the Gazebo GUI shows maze walls and arches: solid,
+                 transparent (default), hidden or marking (footprints on the floor);
+                 the robot always collides with them and its sensors see them
+    route      - draw the route line in the Gazebo GUI: true or false
+    objects    - number of objects (items and traffic cones) scattered around the
+                 maze (not in it and not at start points)
+    objects_seed - seed of the object placement; empty for a new random one
+    layout     - layout file from generator.py; set by the launch file
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="floor" default="concrete"/>
+  <xacro:arg name="wall_material" default="brick"/>
+  <xacro:arg name="arch_material" default="contrast"/>
+  <xacro:arg name="maze" default="level1"/>
+  <xacro:arg name="seed" default="0"/>
+  <xacro:arg name="difficulty" default="medium"/>
+  <xacro:arg name="wall_view" default="transparent"/>
+  <xacro:arg name="route" default="true"/>
+  <xacro:arg name="objects" default="14"/>
+  <xacro:arg name="objects_seed" default=""/>
+  <xacro:arg name="layout" default=""/>
+
+  <xacro:include filename="include/common.xacro"/>
+  <xacro:include filename="include/floor.xacro"/>
+  <xacro:include filename="include/marking.xacro"/>
+  <xacro:include filename="include/structures.xacro"/>
+  <xacro:include filename="include/objects.xacro"/>
+
+  <xacro:property name="maze_layout" value="${xacro.load_yaml('$(arg layout)')}"/>
+  <!-- Walls and arches with their textures at the real size (maze/generator.py, lib/textured_box.py). -->
+  <xacro:property name="wall_meshes" value="${maze_layout.get('meshes', dict())}"/>
+  <!-- Wall boxes [x, y, size_x, size_y] lo..hi-1, split in halves to keep the recursion shallow. -->
+  <xacro:macro name="maze_walls" params="walls lo hi">
+    <xacro:if value="${hi - lo == 1}">
+      <xacro:property name="along_x" value="${walls[lo][2] >= walls[lo][3]}"/>
+      <xacro:wall name="wall_${lo}" x="${walls[lo][0]}" y="${walls[lo][1]}" yaw="${0 if along_x else pi / 2}"
+          length="${max(walls[lo][2], walls[lo][3])}" thickness="${min(walls[lo][2], walls[lo][3])}"
+          height="${maze_layout['wall_height']}" material="$(arg wall_material)" view="$(arg wall_view)"/>
+    </xacro:if>
+    <xacro:if value="${hi - lo > 1}">
+      <xacro:maze_walls walls="${walls}" lo="${lo}" hi="${(lo + hi) // 2}"/>
+      <xacro:maze_walls walls="${walls}" lo="${(lo + hi) // 2}" hi="${hi}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Arches lo..hi-1, split in halves to keep the recursion shallow. -->
+  <xacro:macro name="maze_arches" params="arches lo hi">
+    <xacro:if value="${hi - lo == 1}">
+      <xacro:property name="arch_cfg" value="${arches[lo]}"/>
+      <xacro:arch name="${arch_cfg['type']}_${lo}" x="${arch_cfg['x']}" y="${arch_cfg['y']}" yaw="${arch_cfg['yaw']}"
+          span="${maze_layout['span']}" width="${arch_cfg['width']}" height="${arch_cfg['height']}"
+          wall_height="${maze_layout['wall_height']}" thickness="${maze_layout['wall_thickness']}" view="$(arg wall_view)"
+          material="$(arg arch_material)"/>
+    </xacro:if>
+    <xacro:if value="${hi - lo > 1}">
+      <xacro:maze_arches arches="${arches}" lo="${lo}" hi="${(lo + hi) // 2}"/>
+      <xacro:maze_arches arches="${arches}" lo="${(lo + hi) // 2}" hi="${hi}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Route segments [x1, y1, x2, y2, start, end] lo..hi-1, split in halves to keep the recursion shallow. -->
+  <xacro:macro name="maze_route" params="route lo hi">
+    <xacro:if value="${hi - lo == 1}">
+      <xacro:marking_line name="route_${lo}" x1="${route[lo][0]}" y1="${route[lo][1]}" x2="${route[lo][2]}" y2="${route[lo][3]}"
+          start="${route[lo][4]}" end="${route[lo][5]}" style="blue" width="0.03" visibility="${visible_gui_only}"/>
+    </xacro:if>
+    <xacro:if value="${hi - lo > 1}">
+      <xacro:maze_route route="${route}" lo="${lo}" hi="${(lo + hi) // 2}"/>
+      <xacro:maze_route route="${route}" lo="${(lo + hi) // 2}" hi="${hi}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <world name="maze">
+
+    <xacro:world_setup/>
+
+    <xacro:floor type="$(arg floor)" size_x="${maze_layout['warehouse'][0]}" size_y="${maze_layout['warehouse'][1]}"/>
+    <xacro:perimeter_walls size_x="${maze_layout['warehouse'][0]}" size_y="${maze_layout['warehouse'][1]}" material="$(arg wall_material)"/>
+
+    <model name="maze_walls">
+      <static>true</static>
+      <link name="link">
+        <xacro:maze_walls walls="${maze_layout['walls']}" lo="0" hi="${len(maze_layout['walls'])}"/>
+      </link>
+    </model>
+    <xacro:if value="${len(maze_layout['arches']) > 0}">
+      <xacro:maze_arches arches="${maze_layout['arches']}" lo="0" hi="${len(maze_layout['arches'])}"/>
+    </xacro:if>
+
+    <xacro:if value="$(arg route)">
+      <!-- Above wall footprints and start points. -->
+      <model name="maze_route">
+        <static>true</static>
+        <pose>0 0 0.002 0 0 0</pose>
+        <link name="link">
+          <xacro:maze_route route="${maze_layout['route']}" lo="0" hi="${len(maze_layout['route'])}"/>
+        </link>
+      </model>
+    </xacro:if>
+
+    <xacro:scatter_objects objects="${maze_layout.get('objects', [])}"/>
+
+    <xacro:start_point name="a" x="${maze_layout['starts']['a'][0]}" y="${maze_layout['starts']['a'][1]}" yaw="${maze_layout['starts']['a'][2]}"/>
+    <xacro:start_point name="b" x="${maze_layout['starts']['b'][0]}" y="${maze_layout['starts']['b'][1]}" yaw="${maze_layout['starts']['b'][2]}"/>
+
+  </world>
+</sdf>

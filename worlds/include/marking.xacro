@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+<!--
+  Floor marking line with a style from markings.yaml. Generates visuals only,
+  so it should be placed inside a link of a static model.
+
+  Usage:
+    <xacro:marking_line name="edge" x1="0" y1="0" x2="1" y2="0" style="yellow_black" width="0.05" start="left" end="left"/>
+    <xacro:marking_arc name="loop" cx="0" cy="0" r="2" a1="0" a2="${pi}" style="white" width="0.05"/>
+
+  'z1' and 'z2' raise the line ends, e.g. to lay it on a ramp. Mitered ends are
+  supported only for lines lying on the floor. 'fine' splits the line into
+  segments 1 width long instead of 4, so a chain of short lines can follow a
+  curved surface closely without squeezing stripe textures.
+
+  Arcs go counterclockwise from angle 'a1' to 'a2' (radians) around (cx, cy)
+  and are made of straight segments, so they join tangent lines with flat ends.
+
+  Lane macros draw lines parallel to a path at lateral 'offsets' to the left
+  of it (for arcs, towards the center), e.g. [0] for a center line or
+  [-0.3, 0.3] for lane edges:
+    <xacro:lane_line name="road" x1="0" y1="0" x2="5" y2="0" offsets="${[-0.3, 0.3]}" style="white"/>
+    <xacro:lane_arc name="turn" cx="0" cy="0" r="2" a1="0" a2="${pi}" offsets="${[-0.3, 0.3]}" style="white"/>
+
+  'start' and 'end' set how the line ends at (x1, y1) and (x2, y2):
+    flat        - square end, lengthened by 'extend' (negative value shortens it);
+    left, right - 45 degree cut for a 90 degree corner where the path turns
+                  left or right. Both lines meeting at the corner must have
+                  the cut, so they join without overlapping.
+
+  'visibility' sets the visual visibility flags (see common.xacro).
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="common.xacro"/>
+
+  <xacro:property name="markings" value="${xacro.load_yaml('$(find kpi_rover)/worlds/include/markings.yaml')}"/>
+
+  <!-- Thickness of marking lines and their height above the floor. -->
+  <xacro:property name="marking_thickness" value="0.001"/>
+
+  <!-- Segments k..n-1 of a line starting at (x, y, z) with direction (dx, dy, dz). -->
+  <xacro:macro name="marking_segments" params="name k n x y z dx dy dz yaw pitch seg width color texture visibility">
+    <visual name="${name}_${k}">
+      <pose>${x + dx * seg * (k + 0.5)} ${y + dy * seg * (k + 0.5)} ${z + dz * seg * (k + 0.5) + marking_thickness / 2} 0 ${pitch} ${yaw}</pose>
+      <geometry>
+        <box>
+          <size>${seg} ${width} ${marking_thickness}</size>
+        </box>
+      </geometry>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <visibility_flags>${visibility}</visibility_flags>
+    </visual>
+    <xacro:if value="${k + 1 &lt; n}">
+      <xacro:marking_segments name="${name}" k="${k + 1}" n="${n}" x="${x}" y="${y}" z="${z}" dx="${dx}" dy="${dy}" dz="${dz}"
+          yaw="${yaw}" pitch="${pitch}" seg="${seg}" width="${width}" color="${color}" texture="${texture}" visibility="${visibility}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Triangle filling a 45 degree cut at the line 'side' (start or end) located at (x, y). -->
+  <xacro:macro name="marking_miter" params="name side turn x y yaw width color texture visibility">
+    <visual name="${name}_${side}_miter">
+      <pose>${x} ${y} 0 0 0 ${yaw}</pose>
+      <geometry>
+        <mesh>
+          <uri>file://${meshes_dir}/miter_${side}_${turn}.obj</uri>
+          <scale>${width} ${width} ${marking_thickness}</scale>
+        </mesh>
+      </geometry>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <visibility_flags>${visibility}</visibility_flags>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="marking_line" params="name x1 y1 x2 y2 style z1:=0 z2:=0 width:=0.05 start:=flat end:=flat extend:=0 fine:=False visibility:=${visible_all}">
+    <xacro:property name="style_cfg" value="${markings[style]}"/>
+    <xacro:property name="line_dist" value="${sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)}"/>
+    <xacro:property name="dx" value="${(x2 - x1) / line_dist}"/>
+    <xacro:property name="dy" value="${(y2 - y1) / line_dist}"/>
+    <xacro:property name="dz" value="${(z2 - z1) / line_dist}"/>
+    <xacro:property name="yaw" value="${atan2(dy, dx)}"/>
+    <xacro:property name="pitch" value="${-asin(dz)}"/>
+    <!-- Distance the line body goes beyond each end point; mitered ends stop half a width before it. -->
+    <xacro:property name="start_offset" value="${extend if start == 'flat' else -width / 2}"/>
+    <xacro:property name="end_offset" value="${extend if end == 'flat' else -width / 2}"/>
+    <xacro:property name="length" value="${line_dist + start_offset + end_offset}"/>
+    <xacro:property name="bx1" value="${x1 - dx * start_offset}"/>
+    <xacro:property name="by1" value="${y1 - dy * start_offset}"/>
+    <xacro:property name="bz1" value="${z1 - dz * start_offset}"/>
+    <!-- Striped lines are split into segments about 4 widths long (1 width if 'fine'), one texture each. -->
+    <xacro:property name="segment" value="${width if fine else 4 * width}"/>
+    <xacro:property name="texture" value="${style_cfg['texture'].replace('.png', '_tile.png') if fine else style_cfg['texture']}"/>
+    <xacro:property name="n" value="${max(1, int(round(length / segment))) if fine or style_cfg['texture'] != '' else 1}"/>
+
+    <xacro:marking_segments name="${name}" k="0" n="${n}" x="${bx1}" y="${by1}" z="${bz1}"
+        dx="${dx}" dy="${dy}" dz="${dz}" yaw="${yaw}" pitch="${pitch}" seg="${length / n}" width="${width}"
+        color="${style_cfg['color']}" texture="${texture}" visibility="${visibility}"/>
+
+    <xacro:if value="${start != 'flat'}">
+      <xacro:marking_miter name="${name}" side="start" turn="${start}" x="${bx1}" y="${by1}" yaw="${yaw}" width="${width}"
+          color="${style_cfg['color']}" texture="${style_cfg['texture']}" visibility="${visibility}"/>
+    </xacro:if>
+    <xacro:if value="${end != 'flat'}">
+      <xacro:marking_miter name="${name}" side="end" turn="${end}" x="${bx1 + dx * length}" y="${by1 + dy * length}" yaw="${yaw}"
+          width="${width}" color="${style_cfg['color']}" texture="${style_cfg['texture']}" visibility="${visibility}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!--
+    Segments k..n-1 of an arc, each spanning angle 'step'. Segments are
+    lengthened so their outer corners meet, and alternate segments are raised
+    slightly to avoid z-fighting where the inner corners overlap.
+  -->
+  <xacro:macro name="marking_arc_segments" params="name k n cx cy r a1 step width color texture visibility">
+    <xacro:property name="a" value="${a1 + step * (k + 0.5)}"/>
+    <visual name="${name}_${k}">
+      <pose>${cx + r * cos(step / 2) * cos(a)} ${cy + r * cos(step / 2) * sin(a)} ${marking_thickness / 2 + (k % 2) * 0.0001} 0 0 ${a + pi / 2}</pose>
+      <geometry>
+        <box>
+          <size>${2 * r * sin(step / 2) + width * tan(step / 2)} ${width} ${marking_thickness}</size>
+        </box>
+      </geometry>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <visibility_flags>${visibility}</visibility_flags>
+    </visual>
+    <xacro:if value="${k + 1 &lt; n}">
+      <xacro:marking_arc_segments name="${name}" k="${k + 1}" n="${n}" cx="${cx}" cy="${cy}" r="${r}" a1="${a1}" step="${step}"
+          width="${width}" color="${color}" texture="${texture}" visibility="${visibility}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="marking_arc" params="name cx cy r a1 a2 style width:=0.05 visibility:=${visible_all}">
+    <xacro:property name="style_cfg" value="${markings[style]}"/>
+    <!-- Segments are about 4 widths long, as on straight striped lines, which keeps arcs smooth too. -->
+    <xacro:property name="n" value="${max(1, int(round((a2 - a1) * r / (4 * width))))}"/>
+    <xacro:marking_arc_segments name="${name}" k="0" n="${n}" cx="${cx}" cy="${cy}" r="${r}" a1="${a1}" step="${(a2 - a1) / n}"
+        width="${width}" color="${style_cfg['color']}" texture="${style_cfg['texture']}" visibility="${visibility}"/>
+  </xacro:macro>
+
+  <xacro:macro name="lane_line" params="name x1 y1 x2 y2 offsets style width:=0.05 i:=0">
+    <xacro:property name="line_len" value="${sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)}"/>
+    <xacro:property name="nx" value="${-(y2 - y1) / line_len * offsets[i]}"/>
+    <xacro:property name="ny" value="${(x2 - x1) / line_len * offsets[i]}"/>
+    <xacro:marking_line name="${name}_${i}" x1="${x1 + nx}" y1="${y1 + ny}" x2="${x2 + nx}" y2="${y2 + ny}" style="${style}" width="${width}"/>
+    <xacro:if value="${i + 1 &lt; len(offsets)}">
+      <xacro:lane_line name="${name}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" offsets="${offsets}" style="${style}" width="${width}" i="${i + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="lane_arc" params="name cx cy r a1 a2 offsets style width:=0.05 i:=0">
+    <xacro:marking_arc name="${name}_${i}" cx="${cx}" cy="${cy}" r="${r - offsets[i]}" a1="${a1}" a2="${a2}" style="${style}" width="${width}"/>
+    <xacro:if value="${i + 1 &lt; len(offsets)}">
+      <xacro:lane_arc name="${name}" cx="${cx}" cy="${cy}" r="${r}" a1="${a1}" a2="${a2}" offsets="${offsets}" style="${style}" width="${width}" i="${i + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+</sdf>

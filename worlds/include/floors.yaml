@@ -1,0 +1,51 @@
+# Floor types available in worlds built with the 'floor' macro (floor.xacro).
+# Also used for overpass surfaces.
+#
+# texture  - photo texture directory in worlds/media/textures (see
+#            tools/assets/fetch_textures.py and textures/CREDITS.md), covering one
+#            'tile' x 'tile' m square. Empty for a plain colored floor.
+# color    - RGB color; multiplied with the texture when it is set.
+# tile     - size of the area one texture covers, m.
+# mu       - surface friction coefficient (approximate values for rubber wheels).
+
+plain:
+  texture: ''
+  color: [0.25, 0.25, 0.25]
+  tile: 2.0
+  mu: 1.0
+
+concrete:
+  texture: floor_concrete
+  color: [1.0, 1.0, 1.0]
+  tile: 2.0
+  mu: 0.9
+
+painted_concrete:
+  texture: floor_painted_concrete
+  color: [1.0, 1.0, 1.0]
+  tile: 2.0
+  mu: 0.7
+
+asphalt:
+  texture: floor_asphalt
+  color: [1.0, 1.0, 1.0]
+  tile: 2.0
+  mu: 1.0
+
+carpet:
+  texture: floor_carpet
+  color: [1.0, 1.0, 1.0]
+  tile: 1.8
+  mu: 0.8
+
+wood:
+  texture: floor_wood
+  color: [1.0, 1.0, 1.0]
+  tile: 1.7
+  mu: 0.6
+
+tiles:
+  texture: floor_tiles
+  color: [1.0, 1.0, 1.0]
+  tile: 3.0
+  mu: 0.5

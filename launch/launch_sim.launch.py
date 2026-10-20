@@ -1,146 +1,109 @@
 """
-Launch file for the KPIRover simulation.
+Launch file for the KPIRover simulation. Its parts are switched with arguments:
+- gazebo: Gazebo server with the selected world.
+- robot: the robot (spawn_robot.launch.py) with EKF, SLAM toolbox and navigation.
+- ui: Gazebo GUI and RViz (launch_sim_ui.launch.py).
 
-This file launches the following components:
-- Gazebo simulation server with a specific world file.
-- Robot State Publisher (rsp) with ROS2 control enabled.
-- Spawner to insert the robot into the simulation at a given pose.
-- Controllers for joint state broadcasting and differential drive.
-- EKF node for sensor fusion and localization.
-- SLAM toolbox for online asynchronous mapping.
-- Navigation stack for path planning.
-- Gazebo UI and joystick interface for simulation control.
+Examples:
+    ros2 launch kpi_rover launch_sim.launch.py world:=garden world_args:="grass:=0.5 mud:=0.25" start:=road_a
+    ros2 launch kpi_rover launch_sim.launch.py world:=maze robot:=false
+    ros2 launch kpi_rover launch_sim.launch.py gazebo:=false x_pose:=1.5 y_pose:=-2 yaw_pose:=1.57
+
+The last one adds the robot to a world that is already running.
+'python3 worlds/lib/world_info.py' lists the worlds and their arguments.
 
 All nodes use simulated time.
 """
 
 import os
+import sys
 
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess
+from launch import LaunchDescription, logging
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, SetLaunchConfiguration
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-# Define the common simulation clock parameter
-use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+package_dir = get_package_share_directory('kpi_rover')
+worlds_dir = os.path.join(package_dir, 'worlds')
+sys.path.append(os.path.join(worlds_dir, 'lib'))
+import world_info  # noqa: E402
 
-package_name = 'kpi_rover'
-ros_gz_sim = get_package_share_directory('ros_gz_sim')
+POSE = ('x_pose', 'y_pose', 'z_pose', 'yaw_pose')
 
-ld = LaunchDescription()
-ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'))
+# Height above a start point the robot is spawned at, so it drops onto uneven ground instead of into it.
+START_LIFT = 0.03
 
-# Launch Gazebo simulation server with the specified world file.
-# This starts the simulation environment.
-world = os.path.join(
-    get_package_share_directory(package_name),
-    'worlds',
-    'industrial-warehouse.sdf'
-)
-gzserver_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(ros_gz_sim, 'launch', 'gz_sim.launch.py')
-    ),
-    launch_arguments={
-        'gz_args': ['-r -s -v4 ', world],
-        'on_exit_shutdown': 'true'
-    }.items()
-)
 
-# Launch the Robot State Publisher (rsp) with ROS2 control enabled.
-# This node publishes the state of the robot to TF and other systems.
-rsp_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory(package_name), 'launch', 'rsp.launch.py')
-    ),
-    launch_arguments={
-        'use_sim_time': use_sim_time,
-        'use_ros2_control': 'true'
-    }.items()
-)
+def include(path, condition=None, **launch_arguments):
+    return IncludeLaunchDescription(PythonLaunchDescriptionSource(path),
+                                    launch_arguments=launch_arguments.items(), condition=condition)
 
-# Spawn the robot into the simulation at a specified position.
-# The x, y, and z positions define where the robot appears in the world.
-spawn_robot_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory(package_name), 'launch', 'spawn_robot.launch.py')
-    ),
-    launch_arguments={
-        'x_pose': LaunchConfiguration('x_pose', default='0'),
-        'y_pose': LaunchConfiguration('y_pose', default='0'),
-        'z_pose': LaunchConfiguration('z_pose', default='0')
-    }.items()
-)
 
-# Load the Joint State Broadcaster controller.
-# This controller publishes the joint states necessary for robot control.
-load_joint_state_broadcaster = ExecuteProcess(
-    cmd=['ros2', 'control', 'load_controller', '--set-state', 'active', 'joint_state_broadcaster'],
-    output='screen'
-)
+def world_setup(context):
+    """Build the selected world, start Gazebo with it and set the spawn pose from the 'start' point."""
+    cfg = context.launch_configurations
+    if not IfCondition(LaunchConfiguration('gazebo')).evaluate(context) and not cfg['start']:
+        return []  # the robot goes into a running world at the given pose
 
-# Load the Differential Drive controller.
-# This controller converts velocity commands into motor commands for robot maneuvering.
-load_diff_drive_controller = ExecuteProcess(
-    cmd=['ros2', 'control', 'load_controller', '--set-state', 'active', 'diff_drive_controller'],
-    output='screen'
-)
+    args = world_info.parse_args(cfg['world_args'])
+    args.update({name: cfg[name] for name in ('floor', 'marking') if cfg[name]})
+    world = world_info.build(cfg['world'], args, worlds_dir)
+    # Tools (e.g. a GUI making a map of the generated world) read the world file from this line.
+    logging.get_logger('launch_sim').info(f'World file: {world}')
 
-# Launch the EKF node for sensor fusion and localization.
-# It fuses sensor data (e.g., IMU, odometry) to estimate the robot's pose.
-ekf = Node(
-    package='robot_localization',
-    executable='ekf_node',
-    name='ekf_filter_node',
-    output='screen',
-    parameters=[
-        os.path.join(get_package_share_directory(package_name), 'config', 'ekf.yaml'),
-        {'use_sim_time': use_sim_time},
-    ]
-)
+    actions = [include(os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py'),
+                       condition=IfCondition(LaunchConfiguration('gazebo')),
+                       gz_args=f'-r -s -v4 {world}', on_exit_shutdown='true')]
+    if cfg['start']:
+        x, y, z, yaw = world_info.start_pose(world, cfg['start'])
+        actions += [SetLaunchConfiguration(name, str(value)) for name, value in zip(POSE, (x, y, z + START_LIFT, yaw))]
+    return actions
 
-# Launch the SLAM toolbox for online asynchronous mapping.
-# It builds a map of the environment from sensor data.
-slam_toolbox_map = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')
-    ),
-    launch_arguments={
-        'slam_params_file': os.path.join(get_package_share_directory(package_name), 'config', 'slam_toolbox_mapping.yaml'),
-        'use_sim_time': use_sim_time
-    }.items()
-)
-
-# Launch the navigation stack.
-# Provides path planning and obstacle avoidance for autonomous robot movement.
-nav = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory(package_name), 'launch', 'navigation.launch.py')
-    ),
-    launch_arguments={'use_sim_time': use_sim_time}.items()
-)
-
-# Include the Gazebo UI .
-# This provides a graphical interface for controlling the simulation environment.
-launch_sim_ui = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory(package_name), 'launch', 'launch_sim_ui.launch.py')
-    ),
-    launch_arguments={'use_sim_time': use_sim_time}.items()
-)
-
-# Add all components into the LaunchDescription in the desired sequence.
-ld.add_action(gzserver_cmd)           # Start Gazebo simulation server.
-ld.add_action(rsp_cmd)                # Start the robot state publisher.
-ld.add_action(spawn_robot_cmd)        # Spawn the robot into the simulation.
-ld.add_action(load_joint_state_broadcaster)  # Load joint state controller.
-ld.add_action(load_diff_drive_controller)    # Load differential drive controller.
-ld.add_action(ekf)                    # Run EKF for sensor fusion and localization.
-ld.add_action(slam_toolbox_map)       # Run SLAM toolkit for mapping.
-ld.add_action(nav)                    # Start navigation stack.
-ld.add_action(launch_sim_ui)          # Launch Gazebo UI
 
 def generate_launch_description():
-    return ld
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+    world = OpaqueFunction(function=world_setup)
+
+    robot = GroupAction(condition=IfCondition(LaunchConfiguration('robot')), actions=[
+        include(os.path.join(package_dir, 'launch', 'spawn_robot.launch.py'),
+                **{name: LaunchConfiguration(name) for name in POSE}),
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            parameters=[os.path.join(package_dir, 'config', 'ekf.yaml'), {'use_sim_time': use_sim_time}],
+        ),
+        include(os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py'),
+                slam_params_file=os.path.join(package_dir, 'config', 'slam_toolbox_mapping.yaml'),
+                use_sim_time=use_sim_time),
+        include(os.path.join(package_dir, 'launch', 'navigation.launch.py'), use_sim_time=use_sim_time),
+    ])
+
+    ui = include(os.path.join(package_dir, 'launch', 'launch_sim_ui.launch.py'),
+                 condition=IfCondition(LaunchConfiguration('ui')), use_sim_time=use_sim_time)
+
+    arguments = [
+        ('use_sim_time', 'true', 'Use simulation (Gazebo) clock if true'),
+        ('gazebo', 'true', 'Start Gazebo with the world; false to add the robot to a running one'),
+        ('robot', 'true', 'Spawn the robot with its navigation'),
+        ('ui', 'true', 'Start the Gazebo GUI and RViz'),
+        ('world', 'industrial-warehouse', f"World name ({', '.join(world_info.world_files(worlds_dir))}) or path to an SDF file"),
+        ('world_args', '', "Arguments of a .sdf.xacro world as 'name:=value' pairs separated by spaces"),
+        ('floor', '', f"Floor of a .sdf.xacro world ({', '.join(world_info.options('floors', worlds_dir))})"),
+        ('marking', '', f"Marking of a .sdf.xacro world ({', '.join(world_info.options('markings', worlds_dir))})"),
+        ('start', '', 'Start point of the world to spawn the robot at, instead of the pose'),
+        ('x_pose', '0.0', 'Robot spawn X position'),
+        ('y_pose', '0.0', 'Robot spawn Y position'),
+        ('z_pose', '0.0', 'Robot spawn Z position'),
+        ('yaw_pose', '0.0', 'Robot spawn yaw in radians'),
+    ]
+
+    return LaunchDescription(
+        [DeclareLaunchArgument(name, default_value=default, description=text) for name, default, text in arguments]
+        + [world, robot, ui]
+    )

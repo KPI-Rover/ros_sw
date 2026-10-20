@@ -1,0 +1,289 @@
+# Plants for the garden, written by fetch_plants.py.
+# tufts: mesh - glTF of one tuft in worlds/media (Y-up: rolled 90 degrees about X);
+#        height, radius - real tuft height and radius around its origin, m.
+# cards: atlas - tuft pictures in worlds/media; sprites - their places in the atlas
+#        (uv: left, top, right, bottom) and real sizes, m.
+# clusters: atlas - leaf cluster pictures side by side, for the tree crowns.
+tufts:
+  grass_medium_01_small_a: {mesh: models/grass_medium_01/grass_medium_01_small_a.gltf,
+    height: 0.14, radius: 0.105}
+  grass_medium_01_large_b: {mesh: models/grass_medium_01/grass_medium_01_large_b.gltf,
+    height: 0.169, radius: 0.146}
+  grass_medium_01_mid_b: {mesh: models/grass_medium_01/grass_medium_01_mid_b.gltf,
+    height: 0.178, radius: 0.113}
+  grass_medium_01_tall_b: {mesh: models/grass_medium_01/grass_medium_01_tall_b.gltf,
+    height: 0.286, radius: 0.084}
+  grass_medium_01_tall_a: {mesh: models/grass_medium_01/grass_medium_01_tall_a.gltf,
+    height: 0.323, radius: 0.084}
+  grass_medium_01_tall_c: {mesh: models/grass_medium_01/grass_medium_01_tall_c.gltf,
+    height: 0.236, radius: 0.086}
+  grass_medium_01_small_b: {mesh: models/grass_medium_01/grass_medium_01_small_b.gltf,
+    height: 0.1, radius: 0.098}
+  grass_medium_01_mid_c: {mesh: models/grass_medium_01/grass_medium_01_mid_c.gltf,
+    height: 0.145, radius: 0.112}
+  grass_medium_01_mid_a: {mesh: models/grass_medium_01/grass_medium_01_mid_a.gltf,
+    height: 0.218, radius: 0.112}
+  grass_medium_01_large_a: {mesh: models/grass_medium_01/grass_medium_01_large_a.gltf,
+    height: 0.147, radius: 0.169}
+  grass_medium_01_large_c: {mesh: models/grass_medium_01/grass_medium_01_large_c.gltf,
+    height: 0.142, radius: 0.145}
+  grass_medium_01_tiny_c: {mesh: models/grass_medium_01/grass_medium_01_tiny_c.gltf,
+    height: 0.082, radius: 0.028}
+  grass_medium_01_tiny_a: {mesh: models/grass_medium_01/grass_medium_01_tiny_a.gltf,
+    height: 0.112, radius: 0.051}
+  grass_medium_01_tiny_b: {mesh: models/grass_medium_01/grass_medium_01_tiny_b.gltf,
+    height: 0.06, radius: 0.034}
+  grass_medium_02_a: {mesh: models/grass_medium_02/grass_medium_02_a.gltf, height: 0.157,
+    radius: 0.064}
+  grass_medium_02_b: {mesh: models/grass_medium_02/grass_medium_02_b.gltf, height: 0.18,
+    radius: 0.119}
+  grass_medium_02_c: {mesh: models/grass_medium_02/grass_medium_02_c.gltf, height: 0.232,
+    radius: 0.161}
+  grass_medium_02_d: {mesh: models/grass_medium_02/grass_medium_02_d.gltf, height: 0.26,
+    radius: 0.208}
+  grass_medium_02_e: {mesh: models/grass_medium_02/grass_medium_02_e.gltf, height: 0.403,
+    radius: 0.258}
+  grass_bermuda_01_medium_a: {mesh: models/grass_bermuda_01/grass_bermuda_01_medium_a.gltf,
+    height: 0.098, radius: 0.022}
+  grass_bermuda_01_medium_b: {mesh: models/grass_bermuda_01/grass_bermuda_01_medium_b.gltf,
+    height: 0.075, radius: 0.032}
+  grass_bermuda_01_medium_c: {mesh: models/grass_bermuda_01/grass_bermuda_01_medium_c.gltf,
+    height: 0.067, radius: 0.049}
+  grass_bermuda_01_medium_d: {mesh: models/grass_bermuda_01/grass_bermuda_01_medium_d.gltf,
+    height: 0.102, radius: 0.04}
+  grass_bermuda_01_medium_e: {mesh: models/grass_bermuda_01/grass_bermuda_01_medium_e.gltf,
+    height: 0.083, radius: 0.04}
+  grass_bermuda_01_medium_f: {mesh: models/grass_bermuda_01/grass_bermuda_01_medium_f.gltf,
+    height: 0.113, radius: 0.024}
+  grass_bermuda_01_seedling_a: {mesh: models/grass_bermuda_01/grass_bermuda_01_seedling_a.gltf,
+    height: 0.151, radius: 0.049}
+  grass_bermuda_01_seedling_b: {mesh: models/grass_bermuda_01/grass_bermuda_01_seedling_b.gltf,
+    height: 0.127, radius: 0.043}
+  grass_bermuda_01_seedling_c: {mesh: models/grass_bermuda_01/grass_bermuda_01_seedling_c.gltf,
+    height: 0.092, radius: 0.03}
+  grass_bermuda_01_seedling_d: {mesh: models/grass_bermuda_01/grass_bermuda_01_seedling_d.gltf,
+    height: 0.152, radius: 0.069}
+  grass_bermuda_01_single_a: {mesh: models/grass_bermuda_01/grass_bermuda_01_single_a.gltf,
+    height: 0.149, radius: 0.014}
+  grass_bermuda_01_single_b: {mesh: models/grass_bermuda_01/grass_bermuda_01_single_b.gltf,
+    height: 0.149, radius: 0.014}
+  grass_bermuda_01_small_c: {mesh: models/grass_bermuda_01/grass_bermuda_01_small_c.gltf,
+    height: 0.055, radius: 0.032}
+  grass_bermuda_01_small_d: {mesh: models/grass_bermuda_01/grass_bermuda_01_small_d.gltf,
+    height: 0.055, radius: 0.033}
+  grass_bermuda_01_small_e: {mesh: models/grass_bermuda_01/grass_bermuda_01_small_e.gltf,
+    height: 0.091, radius: 0.015}
+  grass_bermuda_01_small_f: {mesh: models/grass_bermuda_01/grass_bermuda_01_small_f.gltf,
+    height: 0.069, radius: 0.026}
+cards:
+  atlas: models/grass_cards/grass_cards.png
+  sprites:
+  - name: dandelion_01__dandelion_01_a_LOD0
+    width: 0.219
+    height: 0.164
+    uv: [0.25391, 0.38086, 0.37891, 0.47412]
+  - name: dandelion_01__dandelion_01_b_LOD0
+    width: 0.201
+    height: 0.113
+    uv: [0.12695, 0.47656, 0.25195, 0.54688]
+  - name: dandelion_01__dandelion_01_c_LOD0
+    width: 0.169
+    height: 0.1
+    uv: [0.0, 0.47656, 0.125, 0.55078]
+  - name: grass_bermuda_01__grass_bermuda_01_medium_a
+    width: 0.036
+    height: 0.09
+    uv: [0.0, 0.0, 0.05029, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_medium_b
+    width: 0.048
+    height: 0.07
+    uv: [0.05225, 0.0, 0.13721, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_medium_c
+    width: 0.053
+    height: 0.063
+    uv: [0.13916, 0.0, 0.24414, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_medium_d
+    width: 0.049
+    height: 0.093
+    uv: [0.24609, 0.0, 0.31152, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_medium_e
+    width: 0.06
+    height: 0.078
+    uv: [0.31348, 0.0, 0.40918, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_medium_f
+    width: 0.035
+    height: 0.106
+    uv: [0.41113, 0.0, 0.45264, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_seedling_a
+    width: 0.065
+    height: 0.15
+    uv: [0.45459, 0.0, 0.50879, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_seedling_b
+    width: 0.069
+    height: 0.127
+    uv: [0.51074, 0.0, 0.57861, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_seedling_c
+    width: 0.036
+    height: 0.092
+    uv: [0.1084, 0.25391, 0.15674, 0.37842]
+  - name: grass_bermuda_01__grass_bermuda_01_seedling_d
+    width: 0.063
+    height: 0.15
+    uv: [0.58057, 0.0, 0.63281, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_single_a
+    width: 0.004
+    height: 0.149
+    uv: [0.63477, 0.0, 0.6377, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_single_b
+    width: 0.004
+    height: 0.149
+    uv: [0.63965, 0.0, 0.64258, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_small_e
+    width: 0.024
+    height: 0.082
+    uv: [0.64453, 0.0, 0.68115, 0.125]
+  - name: grass_bermuda_01__grass_bermuda_01_small_f
+    width: 0.032
+    height: 0.065
+    uv: [0.68311, 0.0, 0.74414, 0.125]
+  - name: grass_medium_01__grass_medium_01_large_a_LOD0
+    width: 0.314
+    height: 0.144
+    uv: [0.50781, 0.47656, 0.63281, 0.53369]
+  - name: grass_medium_01__grass_medium_01_large_b_LOD0
+    width: 0.277
+    height: 0.166
+    uv: [0.38086, 0.38086, 0.50586, 0.45557]
+  - name: grass_medium_01__grass_medium_01_large_c_LOD0
+    width: 0.275
+    height: 0.139
+    uv: [0.25391, 0.47656, 0.37891, 0.53955]
+  - name: grass_medium_01__grass_medium_01_mid_a_LOD0
+    width: 0.211
+    height: 0.213
+    uv: [0.74609, 0.0, 0.87012, 0.125]
+  - name: grass_medium_01__grass_medium_01_mid_b_LOD0
+    width: 0.182
+    height: 0.177
+    uv: [0.39355, 0.25391, 0.51855, 0.375]
+  - name: grass_medium_01__grass_medium_01_mid_c_LOD0
+    width: 0.189
+    height: 0.142
+    uv: [0.0, 0.38086, 0.125, 0.47461]
+  - name: grass_medium_01__grass_medium_01_small_a_LOD0
+    width: 0.158
+    height: 0.138
+    uv: [0.64746, 0.25391, 0.77246, 0.36279]
+  - name: grass_medium_01__grass_medium_01_small_b_LOD0
+    width: 0.163
+    height: 0.098
+    uv: [0.50781, 0.38086, 0.63281, 0.45557]
+  - name: grass_medium_01__grass_medium_01_tall_a_LOD0
+    width: 0.139
+    height: 0.304
+    uv: [0.87207, 0.0, 0.92871, 0.125]
+  - name: grass_medium_01__grass_medium_01_tall_b_LOD0
+    width: 0.147
+    height: 0.28
+    uv: [0.93066, 0.0, 0.99609, 0.125]
+  - name: grass_medium_01__grass_medium_01_tall_c_LOD0
+    width: 0.146
+    height: 0.233
+    uv: [0.0, 0.12695, 0.07812, 0.25195]
+  - name: grass_medium_01__grass_medium_01_tiny_a_LOD0
+    width: 0.065
+    height: 0.111
+    uv: [0.08008, 0.12695, 0.15332, 0.25195]
+  - name: grass_medium_01__grass_medium_01_tiny_b_LOD0
+    width: 0.023
+    height: 0.06
+    uv: [0.15527, 0.12695, 0.20312, 0.25195]
+  - name: grass_medium_01__grass_medium_01_tiny_c_LOD0
+    width: 0.015
+    height: 0.081
+    uv: [0.20508, 0.12695, 0.22754, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_large_a_LOD0
+    width: 0.314
+    height: 0.144
+    uv: [0.63477, 0.47656, 0.75977, 0.53369]
+  - name: grass_medium_01_dry__grass_medium_01_large_b_LOD0
+    width: 0.277
+    height: 0.166
+    uv: [0.63477, 0.38086, 0.75977, 0.45557]
+  - name: grass_medium_01_dry__grass_medium_01_large_c_LOD0
+    width: 0.275
+    height: 0.139
+    uv: [0.38086, 0.47656, 0.50586, 0.53955]
+  - name: grass_medium_01_dry__grass_medium_01_mid_a_LOD0
+    width: 0.211
+    height: 0.213
+    uv: [0.22949, 0.12695, 0.35352, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_mid_b_LOD0
+    width: 0.182
+    height: 0.177
+    uv: [0.52051, 0.25391, 0.64551, 0.375]
+  - name: grass_medium_01_dry__grass_medium_01_mid_c_LOD0
+    width: 0.189
+    height: 0.142
+    uv: [0.12695, 0.38086, 0.25195, 0.47461]
+  - name: grass_medium_01_dry__grass_medium_01_small_a_LOD0
+    width: 0.158
+    height: 0.138
+    uv: [0.77441, 0.25391, 0.89941, 0.36279]
+  - name: grass_medium_01_dry__grass_medium_01_small_b_LOD0
+    width: 0.163
+    height: 0.098
+    uv: [0.76172, 0.38086, 0.88672, 0.45557]
+  - name: grass_medium_01_dry__grass_medium_01_tall_a_LOD0
+    width: 0.139
+    height: 0.304
+    uv: [0.35547, 0.12695, 0.41211, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_tall_b_LOD0
+    width: 0.147
+    height: 0.28
+    uv: [0.41406, 0.12695, 0.47949, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_tall_c_LOD0
+    width: 0.146
+    height: 0.233
+    uv: [0.48145, 0.12695, 0.55957, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_tiny_a_LOD0
+    width: 0.065
+    height: 0.111
+    uv: [0.56152, 0.12695, 0.63477, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_tiny_b_LOD0
+    width: 0.023
+    height: 0.06
+    uv: [0.63672, 0.12695, 0.68457, 0.25195]
+  - name: grass_medium_01_dry__grass_medium_01_tiny_c_LOD0
+    width: 0.015
+    height: 0.081
+    uv: [0.68652, 0.12695, 0.70898, 0.25195]
+  - name: grass_medium_02__grass_medium_02_a
+    width: 0.113
+    height: 0.132
+    uv: [0.71094, 0.12695, 0.81836, 0.25195]
+  - name: grass_medium_02__grass_medium_02_b
+    width: 0.178
+    height: 0.175
+    uv: [0.2666, 0.25391, 0.3916, 0.37646]
+  - name: grass_medium_02__grass_medium_02_c
+    width: 0.193
+    height: 0.228
+    uv: [0.15869, 0.25391, 0.26465, 0.37842]
+  - name: grass_medium_02__grass_medium_02_d
+    width: 0.254
+    height: 0.257
+    uv: [0.82031, 0.12695, 0.94385, 0.25195]
+  - name: grass_medium_02__grass_medium_02_e
+    width: 0.34
+    height: 0.398
+    uv: [0.0, 0.25391, 0.10645, 0.37891]
+  - name: weed_plant_02__weed_plant_02_a_LOD0
+    width: 0.217
+    height: 0.071
+    uv: [0.0, 0.55273, 0.125, 0.59375]
+  - name: weed_plant_02__weed_plant_02_b_LOD0
+    width: 0.185
+    height: 0.067
+    uv: [0.76172, 0.47656, 0.88672, 0.52148]
+clusters: {atlas: models/apple_leaves/apple_clusters.png, variants: 4}

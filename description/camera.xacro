@@ -40,6 +40,8 @@
           <camera name="intel_realsense_r200">
             <camera_info_topic>camera/camera_info</camera_info_topic>
             <horizontal_fov>1.02974</horizontal_fov>
+            <!-- Hide world visuals meant only for the Gazebo GUI (bit 1, see worlds/include/common.xacro). -->
+            <visibility_mask>4294967293</visibility_mask>
             <image>
               <width>1920</width>
               <height>1080</height>

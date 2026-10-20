@@ -1,0 +1,7 @@
+# Manifest of empty.world for tools (see world_info.py).
+title: Empty world
+description: A flat ground plane without obstacles.
+previews:
+  # previews/world.jpg is a screenshot of the Gazebo window with the robot: a render of the bare
+  # plane shows nothing, so render_previews.py has no world camera to render here.
+  map: {center: [0, 0], size: 10}
