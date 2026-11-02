@@ -3,7 +3,7 @@
 # Always pin `version` to a tag or a commit SHA, never to a branch: the same commit of this
 # repository must always build the same code.
 #
-# Import locally:  ./rover.sh deps   (or: vcs import . < deps.repos)
+# Import locally:  ./rover.sh deps   (or: vcs import src < deps.repos), the packages land in src/external
 # The Docker images import them during the build, see docker/Dockerfile.
 repositories:
   external/lidar_coin_d4a:

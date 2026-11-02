@@ -1,0 +1,7 @@
+# colcon looks for packages only in src/ (the workspace root also holds docker/, rpi/, .docker_home/ ...)
+build:
+  base-paths: [src]
+test:
+  base-paths: [src]
+list:
+  base-paths: [src]
