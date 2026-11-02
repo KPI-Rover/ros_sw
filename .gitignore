@@ -1,0 +1,10 @@
+/build/
+/install/
+/log/
+/external/
+.colcon/
+.vscode/
+.env
+.rover
+.docker_home/
+.ros/

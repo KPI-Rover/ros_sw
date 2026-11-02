@@ -1,0 +1,55 @@
+# Robot side. Installed to ~/kpi-rover on the RPi by ./rover.sh setup, settings are in ~/kpi-rover/.env.
+# The PC side is in docker-compose.yaml at the repository root.
+name: kpi-rover
+
+services:
+  # Starts on boot. Image tag, lidar and wheels come from .env.
+  robot:
+    image: ghcr.io/kpi-rover/robot:${TAG:-main}
+    container_name: kpi-rover-robot
+    restart: unless-stopped
+    init: true
+    network_mode: host
+    ipc: host
+    command: >-
+      ros2 launch kpi_rover_bringup robot.launch.py
+      lidar_model:=${LIDAR_MODEL:-rplidar} wheel_radius:=${WHEEL_RADIUS:-0.034}
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      KPI_WAIT_DEVICES: ${ECU_DEVICE:-/dev/ttyAMA2} ${LIDAR_DEVICE:-/dev/lidar}
+    # /dev is bind-mounted instead of `devices:`: Docker refuses to start a container whose device is
+    # missing, and the USB lidar may appear only after Docker starts at boot. Access is limited to:
+    volumes:
+      - /dev:/dev
+      - /etc/localtime:/etc/localtime:ro
+    device_cgroup_rules:
+      - "c 204:* rmw"   # ttyAMA*: ECU UART
+      - "c 188:* rmw"   # ttyUSB*: lidar USB-UART adapters
+      - "c 166:* rmw"   # ttyACM*
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Interactive: builds and runs an overlay (~/kpi-rover/overlay) on top of the robot software.
+  # Not started by `up`; stop `robot` first, both use the same devices.
+  robot-dev:
+    image: ghcr.io/kpi-rover/robot-dev:${TAG:-main}
+    profiles: [dev]
+    init: true
+    network_mode: host
+    ipc: host
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    group_add: [dialout]
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      HOME: /overlay/.home
+    volumes:
+      - ./overlay:/overlay
+      - /dev:/dev
+      - /etc/localtime:/etc/localtime:ro
+    device_cgroup_rules:
+      - "c 204:* rmw"
+      - "c 188:* rmw"
+      - "c 166:* rmw"
+    tty: true
+    stdin_open: true

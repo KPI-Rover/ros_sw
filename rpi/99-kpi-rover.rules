@@ -1,0 +1,8 @@
+# Stable names for the robot devices, installed to /etc/udev/rules.d by ./rover.sh setup.
+# The robot containers bind-mount /dev, so the names are visible there as well.
+
+# RPLIDAR (CP210x USB-UART): /dev/lidar is used by kpi_rover_bringup/launch/lidar.launch.py
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE:="0666", SYMLINK+="lidar rplidar"
+
+# CSPC Coin D4A (CH340 USB-UART): /dev/sc_mini is used by the cspc_lidar package
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", SYMLINK+="sc_mini"

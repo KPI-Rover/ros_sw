@@ -1,0 +1,9 @@
+# Interactive shells (zellij panes) get the same environment as docker/entrypoint.sh
+source "/opt/ros/${ROS_DISTRO}/setup.bash"
+[ -f /ws/install/setup.bash ] && source /ws/install/setup.bash
+[ -n "${KPI_WS:-}" ] && [ -f "${KPI_WS}/install/setup.bash" ] && source "${KPI_WS}/install/setup.bash"
+
+alias ls='ls --color=auto'
+alias ll='ls -alF'
+# PROMPT_COMMAND keeps the prompt when a ~/.bashrc in the mounted home overrides PS1
+PROMPT_COMMAND='PS1="\[\e[32m\][docker:${KPI_PROMPT:-ros}]\[\e[m\]:\[\e[34m\]\w\[\e[m\]\$ "'

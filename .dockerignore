@@ -1,0 +1,16 @@
+# Everything that is not needed to build the images. Keeping the context small also keeps
+# the colcon layer cached when only docs or scripts change.
+**/.git
+/build
+/install
+/log
+/external
+/.docker_home
+/.vscode
+/.github
+/.env
+/.rover
+/rpi
+*.md
+rover.sh
+docker-compose.yaml

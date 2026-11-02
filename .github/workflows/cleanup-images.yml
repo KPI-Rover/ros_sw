@@ -1,0 +1,30 @@
+# Deletes the images of a branch from ghcr.io/kpi-rover when the branch is deleted.
+# Images that are also tagged `main` are kept.
+name: Clean up images
+
+on:
+  delete:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    if: github.event.ref_type == 'branch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete images tagged with the branch name
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.event.ref }}
+        run: |
+          # Same tag as docker/metadata-action creates for the branch
+          tag=$(echo "$BRANCH" | sed 's#[^a-zA-Z0-9._-]#-#g')
+          for package in pc robot robot-dev; do
+            ids=$(gh api --paginate "/orgs/KPI-Rover/packages/container/$package/versions" \
+              --jq ".[] | select((.metadata.container.tags | index(\"$tag\")) and ((.metadata.container.tags | index(\"main\")) | not)) | .id") || continue
+            for id in $ids; do
+              echo "Deleting $package version $id ($tag)"
+              gh api -X DELETE "/orgs/KPI-Rover/packages/container/$package/versions/$id"
+            done
+          done
