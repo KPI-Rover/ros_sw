@@ -25,8 +25,8 @@ and `log/` next to it.
 
 | Path | What |
 |---|---|
-| `src/kpi_rover_*/` | ROS packages of the robot |
-| `src/old/` | previous version, not built (`COLCON_IGNORE`) |
+| `src/apps/` | application packages built on top of the platform |
+| `src/platform/` | robot platform packages: `kpi_rover_*`; `old/` is the previous version, not built (`COLCON_IGNORE`) |
 | `src/external/` | external packages imported from `deps.repos` (not in git) |
 | `deps.repos` | external packages that are not in apt, pinned to a commit |
 | `docker/Dockerfile` | all images: `pc`, `robot`, `robot-dev` |
