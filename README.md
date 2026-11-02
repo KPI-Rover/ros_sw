@@ -29,7 +29,7 @@ and `log/` next to it.
 | `src/platform/` | robot platform packages: `kpi_rover_*`; `old/` is the previous version, not built (`COLCON_IGNORE`) |
 | `src/external/` | external packages imported from `deps.repos` (not in git) |
 | `deps.repos` | external packages that are not in apt, pinned to a commit |
-| `docker/Dockerfile` | all images: `pc`, `robot`, `robot-dev` |
+| `docker/Dockerfile` | all images: `pc`, `robot` |
 | `docker-compose.yaml` | PC side (service `pc`) |
 | `scripts/rpi-setup/` | robot side: compose file, setup script, udev rules. Installed to `~/kpi-rover` on the robot |
 | `rover.sh` | one entry point for everything below, `./rover.sh help` |
@@ -41,17 +41,16 @@ flowchart LR
     subgraph GitHub
     A[push / Run workflow] --> B[GitHub Actions]
     end
-    B --> C[(ghcr.io/kpi-rover<br/>pc, robot, robot-dev)]
+    B --> C[(ghcr.io/kpi-rover<br/>pc, robot)]
     C -- docker pull --> D[PC: pc]
-    C -- docker pull --> E[Robot: robot, robot-dev]
+    C -- docker pull --> E[Robot: robot]
     D -. DDS .- E
 ```
 
 | Image | Platform | Contents | Used for |
 |---|---|---|---|
 | `pc` | amd64 | ROS desktop-full, Gazebo, dependencies of the workspace. No sources: the repository is mounted | simulation, RViz, building |
-| `robot` | arm64 | runtime dependencies and the built workspace | runs on the robot, starts on boot |
-| `robot-dev` | arm64 | `robot` + compilers | builds an overlay of changed packages on the robot |
+| `robot` | arm64 | the built workspace + build tools (compilers, colcon) | runs on the robot (starts on boot); rebuilding packages on the robot (overlay) |
 
 Image tags: `main` (current version), `<branch>` (built on request), `sha-<commit>` (fixed version).
 
@@ -149,11 +148,11 @@ branch. When the workflow is finished:
 
 ## For maintainers
 
-**CI.** [.github/workflows/build-images.yml](.github/workflows/build-images.yml) builds `pc` on an x86 runner and `robot`,
-`robot-dev` natively on an arm64 runner (free for public repositories). Push to `main` publishes `main` and
+**CI.** [.github/workflows/build-images.yml](.github/workflows/build-images.yml) builds `pc` on an x86 runner and `robot`
+natively on an arm64 runner (free for public repositories). Push to `main` publishes `main` and
 `sha-<commit>`, *Run workflow* publishes `<branch>`, pull requests are only built. Images of deleted branches are
-removed by [cleanup-images.yml](.github/workflows/cleanup-images.yml). New packages in GHCR are private: after the first
-publish set the visibility of `pc`, `robot` and `robot-dev` to public in the organization package settings.
+removed by [cleanup-images.yml](.github/workflows/cleanup-images.yml). The packages in GHCR must be public, so that
+students can pull them without a login (organization package settings).
 
 **Dependencies.**
 - A package released for Jazzy: add it to `package.xml`, rosdep installs it in all images.

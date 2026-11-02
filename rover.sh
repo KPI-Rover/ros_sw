@@ -22,10 +22,10 @@ Robot (the address is saved by `setup` in .rover, or set ROVER_HOST=user@host)
   use <tag>            switch to another image: main, a branch name, sha-<commit> or local
   restart              start the robot software again (e.g. after `overlay`)
   logs                 follow the robot software logs
-  overlay <pkg>...     copy packages to the robot and open robot-dev to build and run them
+  overlay <pkg>...     copy packages to the robot and open a shell there to build and run them
   overlay --clean      remove the overlay from the robot
   rviz                 RViz on the PC, connected to the robot
-  build                build the robot images on the robot from local sources (no CI), tag `local`
+  build                build the robot image on the robot from local sources (no CI), tag `local`
   doctor               collect diagnostics to paste into an issue
   ssh [command...]     ssh to the robot
 EOF
@@ -149,7 +149,7 @@ cmd_overlay() {
     echo "Copied $dir"
   done
   if [ "$(robot_env TAG)" != local ]; then
-    on_robot "docker compose pull -q robot-dev"
+    on_robot "docker compose pull -q robot"
   fi
   on_robot "docker compose stop robot"
   cat <<'EOF'
@@ -160,7 +160,7 @@ Inside the container:
 The robot software is stopped while you work here; start it again with ./rover.sh restart
 
 EOF
-  on_robot_tty "docker compose run --rm robot-dev"
+  on_robot_tty "docker compose run --rm dev"
 }
 
 cmd_rviz() {
@@ -176,12 +176,10 @@ cmd_build() {
   local host revision
   host=$(rover_host)
   revision=$(git rev-parse HEAD)$(git diff --quiet HEAD || echo "-dirty")
-  for target in robot robot-dev; do
-    DOCKER_HOST="ssh://$host" docker buildx build --builder default -f docker/Dockerfile --target "$target" \
-      --label "org.opencontainers.image.revision=$revision" \
-      --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      -t "ghcr.io/kpi-rover/$target:local" .
-  done
+  DOCKER_HOST="ssh://$host" docker buildx build --builder default -f docker/Dockerfile --target robot \
+    --label "org.opencontainers.image.revision=$revision" \
+    --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    -t ghcr.io/kpi-rover/robot:local .
   cmd_use local
 }
 

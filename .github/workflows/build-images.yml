@@ -75,14 +75,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix=sha-
-      - id: meta-robot-dev
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/robot-dev
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix=sha-
-      # Both images share the build stage: the second build reuses it from the builder cache
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -94,13 +86,3 @@ jobs:
           labels: ${{ steps.meta-robot.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/robot:buildcache
           cache-to: ${{ env.PUSH == 'true' && format('type=registry,ref={0}/robot:buildcache,mode=max', env.REGISTRY) || '' }}
-      - uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/Dockerfile
-          target: robot-dev
-          platforms: linux/arm64
-          push: ${{ env.PUSH }}
-          tags: ${{ steps.meta-robot-dev.outputs.tags }}
-          labels: ${{ steps.meta-robot-dev.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/robot:buildcache

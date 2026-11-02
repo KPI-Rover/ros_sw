@@ -3,8 +3,7 @@
 #
 #   target   platform  image                         purpose
 #   pc       amd64     ghcr.io/kpi-rover/pc          simulation, RViz, building the workspace on a PC
-#   robot    arm64     ghcr.io/kpi-rover/robot       runs on the robot, starts on boot
-#   robot-dev arm64    ghcr.io/kpi-rover/robot-dev   robot image + compilers, builds an overlay on the robot
+#   robot    arm64     ghcr.io/kpi-rover/robot       runs on the robot (starts on boot) and builds overlays on it
 #
 # Packages are in src/, the external ones (deps.repos) are imported into src/external during the build.
 # Sources are never kept in the pc image: the workspace is mounted from the host.
@@ -83,14 +82,16 @@ FROM build-deps AS build
 WORKDIR /ws
 COPY --from=deps-src /deps /ws/src
 COPY src /ws/src
-# build/ is a BuildKit cache mount kept between builds on the same machine, so only changed files are recompiled
+# build/ is a BuildKit cache mount kept between builds on the same machine, so only changed files are recompiled.
+# --cmake-clean-cache: a cached CMakeCache.txt breaks the build when a package moves to another directory.
 RUN --mount=type=cache,target=/ws/build,id=kpi-rover-colcon-build \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+    colcon build --merge-install --cmake-clean-cache --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
 
 
-# ---- robot-dev: robot image + compilers, builds an overlay on top of /ws/install (service `robot-dev`) ----
-FROM build-deps AS robot-dev
+# ---- robot: the built workspace + build tools, so packages can be rebuilt on the robot as an overlay
+#      on top of /ws/install (services `robot` and `dev`) ----
+FROM build-deps AS robot
 RUN apt-get update && \
     apt-get install -y --no-install-recommends nano less htop iputils-ping net-tools && \
     rm -rf /var/lib/apt/lists/*
@@ -102,23 +103,8 @@ COPY docker/colcon-defaults.yaml /etc/kpi-rover/colcon-defaults.yaml
 RUN echo ". /etc/kpi-rover.bashrc" >> /etc/bash.bashrc
 # Same path as in the build stage: colcon setup scripts contain absolute prefixes
 COPY --from=build /ws/install /ws/install
-ENV COLCON_DEFAULTS_FILE=/etc/kpi-rover/colcon-defaults.yaml KPI_WS=/overlay KPI_PROMPT=robot-dev ZELLIJ_CONFIG_DIR=/etc/zellij \
+ENV COLCON_DEFAULTS_FILE=/etc/kpi-rover/colcon-defaults.yaml KPI_WS=/overlay KPI_PROMPT=robot ZELLIJ_CONFIG_DIR=/etc/zellij \
     TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash RCUTILS_COLORIZED_OUTPUT=1
 WORKDIR /overlay
-ENTRYPOINT ["kpi-entrypoint"]
-CMD ["zellij"]
-
-
-# ---- robot: runtime dependencies and the built workspace only (service `robot`) ----
-FROM ros:${ROS_DISTRO}-ros-base AS robot
-ARG SIM_ONLY_KEYS
-COPY --from=manifests /src /tmp/src
-RUN apt-get update && \
-    rosdep update --rosdistro "$ROS_DISTRO" && \
-    rosdep install --from-paths /tmp/src --ignore-src -y --dependency-types=exec --skip-keys "$SIM_ONLY_KEYS" && \
-    rm -rf /var/lib/apt/lists/* /tmp/src
-COPY docker/entrypoint.sh /usr/local/bin/kpi-entrypoint
-COPY --from=build /ws/install /ws/install
-ENV RCUTILS_COLORIZED_OUTPUT=1
 ENTRYPOINT ["kpi-entrypoint"]
 CMD ["ros2", "launch", "kpi_rover_bringup", "robot.launch.py"]
