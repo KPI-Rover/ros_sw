@@ -1,5 +1,5 @@
 # PC side: simulation, RViz and building the workspace. Usually started by ./rover.sh, which sets
-# the variables below. The robot side is in rpi/docker-compose.yaml.
+# the variables below. The robot side is in scripts/rpi-setup/docker-compose.yaml.
 name: kpi-rover
 
 services:

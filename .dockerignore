@@ -1,5 +1,5 @@
 # Only what the images need: package sources, deps.repos and the files copied by docker/Dockerfile.
-# Everything else (docs, scripts, rpi/) does not invalidate the build layers.
+# Everything else (docs, scripts/) does not invalidate the build layers.
 *
 !deps.repos
 !src

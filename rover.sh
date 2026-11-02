@@ -43,7 +43,7 @@ rover_host() {
   echo "$ROVER_HOST"
 }
 
-# Commands on the robot run in ~/kpi-rover, where rpi/docker-compose.yaml and .env are installed
+# Commands on the robot run in ~/kpi-rover, where scripts/rpi-setup/docker-compose.yaml and .env are installed
 on_robot() { ssh "$(rover_host)" "cd ~/kpi-rover && $*"; }
 on_robot_tty() { ssh -t "$(rover_host)" "cd ~/kpi-rover && $*"; }
 robot_env() { on_robot "sed -n 's/^$1=//p' .env"; }
@@ -90,7 +90,7 @@ cmd_setup() {
   ssh -o ConnectTimeout=10 "$ROVER_HOST" true || die "cannot ssh to $ROVER_HOST"
   echo "ROVER_HOST=$ROVER_HOST" > .rover
   ssh "$ROVER_HOST" "mkdir -p ~/kpi-rover"
-  scp -q rpi/setup.sh rpi/docker-compose.yaml rpi/99-kpi-rover.rules "$ROVER_HOST:kpi-rover/"
+  scp -q scripts/rpi-setup/setup.sh scripts/rpi-setup/docker-compose.yaml scripts/rpi-setup/99-kpi-rover.rules "$ROVER_HOST:kpi-rover/"
   ssh -t "$ROVER_HOST" "bash ~/kpi-rover/setup.sh $(printf '%q ' "$@")"
 }
 
