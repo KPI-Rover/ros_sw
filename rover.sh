@@ -128,7 +128,7 @@ package_dir() {
     return
   fi
   local xml
-  xml=$(grep -l "<name>$1</name>" ./src/*/package.xml ./src/external/*/package.xml 2> /dev/null | head -n 1 || true)
+  xml=$(grep -rl --include=package.xml "<name>$1</name>" src 2> /dev/null | head -n 1 || true)
   [ -n "$xml" ] || die "package $1 not found (run ./rover.sh deps for external packages)"
   dirname "$xml"
 }
