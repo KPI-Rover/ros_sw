@@ -12,7 +12,7 @@ Usage: ./rover.sh <command> [args]
 PC
   pc [command...]      open the PC container (zellij), or run a command in it
   pc-update            download the latest PC image
-  deps                 import external packages from deps.repos into external/
+  deps                 import external packages from deps.repos into src/external/
 
 Robot (the address is saved by `setup` in .rover, or set ROVER_HOST=user@host)
   setup <user@host> [--lidar rplidar|coin] [--wheel-radius M] [--domain-id N]
@@ -81,7 +81,7 @@ cmd_pc_update() {
 
 cmd_deps() {
   pc_env
-  docker compose run --rm -T "$PC_SERVICE" vcs import --input deps.repos . < /dev/null
+  docker compose run --rm -T "$PC_SERVICE" vcs import --input deps.repos src < /dev/null
 }
 
 cmd_setup() {
@@ -128,7 +128,7 @@ package_dir() {
     return
   fi
   local xml
-  xml=$(grep -l "<name>$1</name>" ./*/package.xml ./external/*/package.xml 2> /dev/null | head -n 1 || true)
+  xml=$(grep -l "<name>$1</name>" ./src/*/package.xml ./src/external/*/package.xml 2> /dev/null | head -n 1 || true)
   [ -n "$xml" ] || die "package $1 not found (run ./rover.sh deps for external packages)"
   dirname "$xml"
 }

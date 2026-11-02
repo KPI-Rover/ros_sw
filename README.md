@@ -20,11 +20,15 @@ and for the robot (Raspberry Pi 5).
 
 ## Repository layout
 
+The repository root is the ROS 2 workspace root: packages are in `src/`, colcon creates `build/`, `install/`
+and `log/` next to it.
+
 | Path | What |
 |---|---|
-| `kpi_rover_*/` | ROS packages of the robot |
-| `old/` | previous version, not built (`COLCON_IGNORE`) |
-| `deps.repos` | external packages that are not in apt, pinned to a commit. Imported into `external/` |
+| `src/kpi_rover_*/` | ROS packages of the robot |
+| `src/old/` | previous version, not built (`COLCON_IGNORE`) |
+| `src/external/` | external packages imported from `deps.repos` (not in git) |
+| `deps.repos` | external packages that are not in apt, pinned to a commit |
 | `docker/Dockerfile` | all images: `pc`, `robot`, `robot-dev` |
 | `docker-compose.yaml` | PC side (service `pc`) |
 | `rpi/` | robot side: compose file, setup script, udev rules. Installed to `~/kpi-rover` on the robot |
@@ -71,7 +75,7 @@ Check which GPU renders: `./rover.sh pc bash -c 'glxinfo -B | grep "OpenGL rende
 ```bash
 git clone https://github.com/KPI-Rover/ros_sw.git
 cd ros_sw
-./rover.sh deps        # import external packages (deps.repos) into external/
+./rover.sh deps        # import external packages (deps.repos) into src/external/
 ./rover.sh pc          # downloads the pc image on first start and opens it in zellij
 ```
 

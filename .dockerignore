@@ -1,16 +1,11 @@
-# Everything that is not needed to build the images. Keeping the context small also keeps
-# the colcon layer cached when only docs or scripts change.
+# Only what the images need: package sources, deps.repos and the files copied by docker/Dockerfile.
+# Everything else (docs, scripts, rpi/) does not invalidate the build layers.
+*
+!deps.repos
+!src
+!docker/entrypoint.sh
+!docker/bashrc
+!docker/colcon-defaults.yaml
+!.zellij
+src/external
 **/.git
-/build
-/install
-/log
-/external
-/.docker_home
-/.vscode
-/.github
-/.env
-/.rover
-/rpi
-*.md
-rover.sh
-docker-compose.yaml

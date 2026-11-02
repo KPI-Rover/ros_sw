@@ -6,6 +6,7 @@
 #   robot    arm64     ghcr.io/kpi-rover/robot       runs on the robot, starts on boot
 #   robot-dev arm64    ghcr.io/kpi-rover/robot-dev   robot image + compilers, builds an overlay on the robot
 #
+# Packages are in src/, the external ones (deps.repos) are imported into src/external during the build.
 # Sources are never kept in the pc image: the workspace is mounted from the host.
 
 ARG ROS_DISTRO=jazzy
@@ -28,7 +29,7 @@ RUN mkdir /deps && \
 # ---- manifests: only package.xml and ignore markers, so dependency layers are not invalidated by code changes ----
 FROM ros:${ROS_DISTRO}-ros-base AS manifests
 COPY --from=deps-src /deps /src
-COPY . /src
+COPY src /src
 RUN find /src ! -type d ! -name package.xml ! -name COLCON_IGNORE ! -name AMENT_IGNORE ! -name CATKIN_IGNORE -delete
 
 
@@ -58,8 +59,9 @@ COPY --from=tools /usr/local/bin/zellij /usr/local/bin/zellij
 COPY .zellij /etc/zellij
 COPY docker/entrypoint.sh /usr/local/bin/kpi-entrypoint
 COPY docker/bashrc /etc/kpi-rover.bashrc
+COPY docker/colcon-defaults.yaml /etc/kpi-rover/colcon-defaults.yaml
 RUN echo ". /etc/kpi-rover.bashrc" >> /etc/bash.bashrc
-ENV KPI_WS=/workspace KPI_PROMPT=pc ZELLIJ_CONFIG_DIR=/etc/zellij \
+ENV COLCON_DEFAULTS_FILE=/etc/kpi-rover/colcon-defaults.yaml KPI_WS=/workspace KPI_PROMPT=pc ZELLIJ_CONFIG_DIR=/etc/zellij \
     TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash RCUTILS_COLORIZED_OUTPUT=1
 WORKDIR /workspace
 ENTRYPOINT ["kpi-entrypoint"]
@@ -80,7 +82,7 @@ RUN apt-get update && \
 FROM build-deps AS build
 WORKDIR /ws
 COPY --from=deps-src /deps /ws/src
-COPY . /ws/src
+COPY src /ws/src
 # build/ is a BuildKit cache mount kept between builds on the same machine, so only changed files are recompiled
 RUN --mount=type=cache,target=/ws/build,id=kpi-rover-colcon-build \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
@@ -96,10 +98,11 @@ COPY --from=tools /usr/local/bin/zellij /usr/local/bin/zellij
 COPY .zellij /etc/zellij
 COPY docker/entrypoint.sh /usr/local/bin/kpi-entrypoint
 COPY docker/bashrc /etc/kpi-rover.bashrc
+COPY docker/colcon-defaults.yaml /etc/kpi-rover/colcon-defaults.yaml
 RUN echo ". /etc/kpi-rover.bashrc" >> /etc/bash.bashrc
 # Same path as in the build stage: colcon setup scripts contain absolute prefixes
 COPY --from=build /ws/install /ws/install
-ENV KPI_WS=/overlay KPI_PROMPT=robot-dev ZELLIJ_CONFIG_DIR=/etc/zellij \
+ENV COLCON_DEFAULTS_FILE=/etc/kpi-rover/colcon-defaults.yaml KPI_WS=/overlay KPI_PROMPT=robot-dev ZELLIJ_CONFIG_DIR=/etc/zellij \
     TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash RCUTILS_COLORIZED_OUTPUT=1
 WORKDIR /overlay
 ENTRYPOINT ["kpi-entrypoint"]
