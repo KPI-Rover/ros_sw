@@ -38,7 +38,7 @@ if sudo rpi-eeprom-update -a | tee /dev/stderr | grep -qi reboot; then
   REBOOT_NEEDED=true
 fi
 
-step "UART: uart0 and uart2 enabled, no serial console"
+step "UART: uart0 and uart2 enabled"
 OVERLAYS=""
 for overlay in uart0-pi5 uart2-pi5; do
   grep -q "^dtoverlay=$overlay\$" "$BOOT/config.txt" || OVERLAYS+="dtoverlay=$overlay"$'\n'
@@ -46,11 +46,6 @@ done
 if [ -n "$OVERLAYS" ]; then
   printf '\n[pi5]\n%s' "$OVERLAYS" | sudo tee -a "$BOOT/config.txt" > /dev/null
   echo "Added to $BOOT/config.txt:"; echo -n "$OVERLAYS"
-  REBOOT_NEEDED=true
-fi
-if grep -q 'console=serial0,[0-9]*' "$BOOT/cmdline.txt"; then
-  sudo sed -i 's/console=serial0,[0-9]* \?//' "$BOOT/cmdline.txt"
-  echo "Removed the serial console from $BOOT/cmdline.txt"
   REBOOT_NEEDED=true
 fi
 
