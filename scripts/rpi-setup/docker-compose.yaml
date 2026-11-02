@@ -30,11 +30,12 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
-  # Interactive: builds and runs an overlay (~/kpi-rover/overlay) on top of the robot software.
+  # Interactive, same image: builds and runs an overlay (~/kpi-rover/overlay) on top of the robot software.
   # Not started by `up`; stop `robot` first, both use the same devices.
-  robot-dev:
-    image: ghcr.io/kpi-rover/robot-dev:${TAG:-main}
+  dev:
+    image: ghcr.io/kpi-rover/robot:${TAG:-main}
     profiles: [dev]
+    command: zellij
     init: true
     network_mode: host
     ipc: host

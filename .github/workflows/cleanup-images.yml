@@ -20,7 +20,7 @@ jobs:
         run: |
           # Same tag as docker/metadata-action creates for the branch
           tag=$(echo "$BRANCH" | sed 's#[^a-zA-Z0-9._-]#-#g')
-          for package in pc robot robot-dev; do
+          for package in pc robot; do
             ids=$(gh api --paginate "/orgs/KPI-Rover/packages/container/$package/versions" \
               --jq ".[] | select((.metadata.container.tags | index(\"$tag\")) and ((.metadata.container.tags | index(\"main\")) | not)) | .id") || continue
             for id in $ids; do
