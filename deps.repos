@@ -1,0 +1,17 @@
+# External ROS packages that are not available from apt (or need a specific version).
+# Packages released for the ROS distro go to package.xml instead, rosdep installs them.
+# Always pin `version` to a tag or a commit SHA, never to a branch: the same commit of this
+# repository must always build the same code.
+#
+# Import locally:  ./rover.sh deps   (or: vcs import . < deps.repos)
+# The Docker images import them during the build, see docker/Dockerfile.
+repositories:
+  external/lidar_coin_d4a:
+    type: git
+    url: https://github.com/KPI-Rover/ros_cspc_lidar_coin_d4a.git
+    version: fa1c9e22ec9d3163820f226b5262da12045351a5
+
+  external/lidar_rpilidar:
+    type: git
+    url: https://github.com/Slamtec/rplidar_ros.git
+    version: 24cc9b6dea97e045bda1408eaa867ce730fd3fc3
