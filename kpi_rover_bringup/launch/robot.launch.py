@@ -3,8 +3,11 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     pkg_bringup = get_package_share_directory('kpi_rover_bringup')
@@ -26,6 +29,12 @@ def generate_launch_description():
         'use_sim_time',
         default_value='false',
         description='Use simulation (Gazebo) clock if true'
+    )
+
+    nav_arg = DeclareLaunchArgument(
+        'nav',
+        default_value='true',
+        description='Start Nav2 (handles the RViz 2D Goal Pose)'
     )
     
     # Launch HW
@@ -68,12 +77,43 @@ def generate_launch_description():
         }.items()
     )
 
+    # Turns unstamped /cmd_vel (Nav2, teleop) into the stamped input of the controller
+    twist_stamper = Node(
+        package='twist_stamper',
+        executable='twist_stamper',
+        parameters=[{
+            'use_sim_time': ParameterValue(LaunchConfiguration('use_sim_time'), value_type=bool),
+            'frame_id': 'base_link',
+        }],
+        remappings=[
+            ('cmd_vel_in', '/cmd_vel'),
+            ('cmd_vel_out', '/diff_drive_controller/cmd_vel'),
+        ],
+        output='screen',
+    )
+
+    # Launch Nav2
+    navigation_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('nav2_bringup'),
+'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'params_file': os.path.join(pkg_bringup, 'config', 'navigation.yaml')
+        }.items(),
+        condition=IfCondition(LaunchConfiguration('nav'))
+    )
+
     return LaunchDescription([
         lidar_model_arg,
         wheel_radius_arg,
         use_sim_time_arg,
+        nav_arg,
         hw_launch,
         lidar_launch,
         localization_launch,
-        slam_launch
+        slam_launch,
+        twist_stamper,
+        navigation_launch
     ])

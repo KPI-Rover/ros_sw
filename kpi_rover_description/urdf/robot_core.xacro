@@ -69,13 +69,13 @@
         <link name="${prefix}_link">
             <visual>
                 <geometry>
-                    <cylinder radius="${wheel_radius}" length="-0.027"/>
+                    <cylinder radius="${wheel_radius}" length="0.027"/>
                 </geometry>
                 <material name="blue"/>
             </visual>
             <collision>
                 <geometry>
-                    <cylinder radius="${wheel_radius}" length="-0.027"/>
+                    <cylinder radius="${wheel_radius}" length="0.027"/>
                 </geometry>
             </collision>
             <xacro:inertial_cylinder mass="${wheel_mass}" length="0.020" radius="${wheel_radius}">
