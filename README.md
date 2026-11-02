@@ -31,7 +31,7 @@ and `log/` next to it.
 | `deps.repos` | external packages that are not in apt, pinned to a commit |
 | `docker/Dockerfile` | all images: `pc`, `robot`, `robot-dev` |
 | `docker-compose.yaml` | PC side (service `pc`) |
-| `rpi/` | robot side: compose file, setup script, udev rules. Installed to `~/kpi-rover` on the robot |
+| `scripts/rpi-setup/` | robot side: compose file, setup script, udev rules. Installed to `~/kpi-rover` on the robot |
 | `rover.sh` | one entry point for everything below, `./rover.sh help` |
 
 ## How it works
