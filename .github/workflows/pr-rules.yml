@@ -1,0 +1,42 @@
+# Checks the pull request (see CONTRIBUTING.md), the PR becomes one commit in main when it is squash-merged:
+# - the title follows Conventional Commits, it becomes the commit message;
+# - the description links an issue (Closes #N or Refs #N).
+name: PR rules
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Title follows Conventional Commits
+        env:
+          # Passed through the environment, never expanded into the script
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types='feat|fix|docs|refactor|perf|test|build|ci|chore|revert'
+          if [[ "$TITLE" =~ ^($types)(\([a-z0-9_/-]+\))?!?:\ [^A-Z](.*[^.])?$ ]]; then
+            echo "OK: $TITLE"
+          else
+            echo "::error::PR title does not follow Conventional Commits: '$TITLE'"
+            echo "Expected '<type>(<scope>): <description>', e.g. 'feat(hw): add IMU calibration on startup'."
+            echo "Types: ${types//|/, }. The description starts with a lower case letter, no period at the end."
+            exit 1
+          fi
+
+      - name: Description links an issue
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          re='(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#[0-9]+'
+          if grep -qiE "$re" <<< "$BODY"; then
+            echo "OK: $(grep -oiE "$re" <<< "$BODY" | head -n 1)"
+          else
+            echo "::error::The PR description does not link an issue."
+            echo "Add 'Closes #<issue>' (the issue is closed on merge) or 'Refs #<issue>' (only linked)."
+            exit 1
+          fi
