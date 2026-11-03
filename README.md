@@ -26,7 +26,7 @@ and `log/` next to it.
 | Path | What |
 |---|---|
 | `src/apps/` | application packages built on top of the platform |
-| `src/platform/` | robot platform packages: `kpi_rover_*`; `old/` is the previous version, not built (`COLCON_IGNORE`) |
+| `src/platform/` | robot platform packages: `kpi_rover_*` |
 | `src/external/` | external packages imported from `deps.repos` (not in git) |
 | `deps.repos` | external packages that are not in apt, pinned to a commit |
 | `docker/Dockerfile` | all images: `pc`, `robot` |
@@ -122,6 +122,18 @@ Run `setup` again at any time, e.g. to change `--lidar` or `--wheel-radius`. The
 ./rover.sh rviz        # RViz on the PC, connected to the robot (the workspace must be built: ./rover.sh pc colcon build)
 ./rover.sh ssh
 ```
+
+**Working with ROS 2 from the PC.** `./rover.sh pc` opens zellij inside the pc container: a terminal with ROS 2
+and the workspace, convenient for `ros2 topic`, `ros2 node`, RViz and other tools next to each other in panes.
+For example, keyboard control of the robot:
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+Keys: `i` forward, `,` back, `j`/`l` turn, `k` stop, `q`/`z` faster/slower. The robot drives only while keys are
+pressed. The commands go to `/cmd_vel` and the robot converts them for the controller, no remapping is needed.
+
+If the container does not see the robot's topics (some routers drop multicast), pass the robot's address and
+domain: `ROS_DOMAIN_ID=0 ROS_STATIC_PEERS=<robot IP> ./rover.sh pc`.
 
 ### Testing your changes on the robot
 
