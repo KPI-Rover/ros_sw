@@ -7,9 +7,12 @@ and for the robot (Raspberry Pi 5).
 <!-- toc -->
 
 - [Repository layout](#repository-layout)
-- [How it works](#how-it-works)
+- [Platform and applications](#platform-and-applications)
+  * [Creating an application](#creating-an-application)
+- [Images and deployment](#images-and-deployment)
 - [Simulation on a PC](#simulation-on-a-pc)
 - [Real robot](#real-robot)
+  * [Network](#network)
   * [First setup](#first-setup)
   * [Everyday work](#everyday-work)
   * [Testing your changes on the robot](#testing-your-changes-on-the-robot)
@@ -34,7 +37,51 @@ and `log/` next to it.
 | `scripts/rpi-setup/` | robot side: compose file, setup script, udev rules. Installed to `~/kpi-rover` on the robot |
 | `rover.sh` | one entry point for everything below, `./rover.sh help` |
 
-## How it works
+## Platform and applications
+
+KPI Rover is a platform: a ready robot with hardware support, localization, mapping and navigation, on top of
+which students build their own applications: patrolling, object search, following a person, delivery and so on.
+The packages are split into layers by this idea:
+
+```mermaid
+flowchart TB
+    A["src/apps — student applications<br/>(what the robot does)"]
+    P["src/platform — robot platform<br/>(how the robot moves and knows where it is)"]
+    E["src/external — external packages<br/>(lidar drivers, ...)"]
+    A --> P --> E
+```
+
+**`src/platform/`** is the base that every application relies on. It is maintained by the project
+maintainers and runs on every robot after boot.
+
+| Package | What it does |
+|---|---|
+| `kpi_rover_description` | robot model (URDF): dimensions, wheels, sensor positions |
+| `kpi_rover_hw` | `ros2_control` hardware interface: talks to the motor controller (ECU) over UART, wheel encoders, IMU |
+| `kpi_rover_localization` | EKF (`robot_localization`): fuses wheel odometry and IMU |
+| `kpi_rover_slam` | `slam_toolbox`: builds the map from the lidar and localizes the robot on it |
+| `kpi_rover_bringup` | launch files and configs: `robot.launch.py` (real robot), `sim.launch.py` (Gazebo), Nav2, lidar, joystick |
+
+**`src/apps/`** is for applications. An application does not drive motors or read sensors directly: it uses
+the platform topics, actions and services (`/cmd_vel`, Nav2, `/scan`, `/map`, ...), so the same application
+works in simulation and on the real robot.
+
+**`src/external/`** contains third-party packages that are not released for Jazzy, imported from `deps.repos`.
+They are not edited here: a change goes to the upstream repository, then the commit in `deps.repos` is updated.
+
+### Creating an application
+
+In the pc container (`./rover.sh pc`):
+```bash
+cd src/apps
+ros2 pkg create my_app --build-type ament_python --dependencies rclpy geometry_msgs nav2_simple_commander
+cd /workspace && colcon build --symlink-install --packages-select my_app && source install/setup.bash
+```
+Run the platform in simulation (`ros2 launch kpi_rover_bringup sim.launch.py`) and the application next to it
+in another zellij pane. On the real robot, run it with the overlay
+([Testing your changes on the robot](#testing-your-changes-on-the-robot)): `./rover.sh overlay my_app`.
+
+## Images and deployment
 
 ```mermaid
 flowchart LR
@@ -95,16 +142,82 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 
 ## Real robot
 
-The robot and the PC must be in the same network.
+### Network
+
+The robot works over Wi-Fi. The PC must be in the same local network as the robot: `rover.sh` controls the
+robot over ssh, ROS 2 topics go directly between the PC and the robot (DDS over UDP). The robot needs internet
+access to download images from ghcr.io.
+
+**Option 1 (recommended): a dedicated router for the robot.** Every robot comes with its own small travel
+router (e.g. GL.iNet). The robot knows only the Wi-Fi of its router, so nothing has to be changed on the robot
+when it passes to another student.
+
+```mermaid
+flowchart LR
+    I((Internet)) --- H[Home router]
+    H -- cable --- R["Robot router<br/>Wi-Fi kpi-rover-NN"]
+    R -- Wi-Fi --- RB["Robot (Raspberry Pi 5)<br/>fixed IP"]
+    R -- "Wi-Fi or cable" --- PC["PC<br/>container pc"]
+    PC -. "ssh, ROS 2 / DDS" .- RB
+```
+
+- Prepared once by the maintainers: Wi-Fi `kpi-rover-NN` with a password, a fixed IP address for the robot
+  (DHCP reservation, e.g. `192.168.8.10`), client isolation off.
+- At home: connect the WAN port of the robot router to the home router **by cable only**, and connect the PC to
+  the Wi-Fi `kpi-rover-NN`. Do not use the repeater mode: the password of your home Wi-Fi would stay in the
+  robot router, which passes to other students.
+- Works anywhere, also without internet (only `setup` and `update` need it).
+
+**Option 2: the home Wi-Fi.** The robot connects directly to the home router:
+
+```mermaid
+flowchart LR
+    I((Internet)) --- H[Home router]
+    H -- Wi-Fi --- RB["Robot (Raspberry Pi 5)"]
+    H -- "Wi-Fi or cable" --- PC["PC<br/>container pc"]
+    PC -. "ssh, ROS 2 / DDS" .- RB
+```
+
+- Reserve a fixed IP address for the robot in the router (DHCP reservation).
+- The router must not isolate Wi-Fi clients from each other (AP/client isolation, often enabled on guest
+  networks). Some routers drop multicast, then the PC does not discover the robot automatically:
+  `./rover.sh rviz` handles this, for `./rover.sh pc` see [Everyday work](#everyday-work).
+- When the robot moves to another home, add the new Wi-Fi while the robot is still reachable (in the old network,
+  or connected by cable to the new router):
+  ```bash
+  ./rover.sh wifi "<ssid>"          # asks for the password; the old networks are kept
+  ./rover.sh wifi                   # list the saved networks
+  ./rover.sh wifi --remove <name>   # remove one
+  ```
+
+> [!WARNING]
+> Before you hand the robot over to someone else, remove your home Wi-Fi from it, otherwise your Wi-Fi password
+> goes with the robot. `./rover.sh wifi` lists the saved networks (the one set in Raspberry Pi Imager is called
+> `preconfigured`), remove yours with `./rover.sh wifi --remove <name>`. Do it last: the robot disconnects from
+> this network immediately.
 
 ### First setup
 
-1. Flash **Raspberry Pi OS (64-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/). In its settings set
-   the hostname (e.g. `rover`), your user, your ssh public key and your Wi-Fi.
-2. Boot the robot and check the ssh access from the PC: `ssh pi@rover.local`.
-3. From the repository on the PC:
+All robots use the same user `rover` with the password `kpi-rover`. A robot passes from one student to another,
+and the next student can log in without reinstalling it.
+
+1. Flash **Raspberry Pi OS (64-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/). In its settings set:
+   - hostname `kpi-rover`;
+   - user `rover`, password `kpi-rover`;
+   - enable SSH (password authentication; you can also add your ssh public key);
+   - Wi-Fi: the robot router (option 1) or your home Wi-Fi (option 2).
+2. On the PC add the robot to `~/.ssh/config`. `HostName` is the robot's IP address (see the router), or
+   `kpi-rover.local`:
+   ```
+   Host kpi-rover-rpi
+       HostName 192.168.8.10
+       User rover
+   ```
+   Optionally copy your key to avoid typing the password: `ssh-copy-id kpi-rover-rpi`.
+3. Boot the robot and check the ssh access from the PC: `ssh kpi-rover-rpi`.
+4. From the repository on the PC:
    ```bash
-   ./rover.sh setup pi@rover.local --lidar rplidar     # or --lidar coin
+   ./rover.sh setup kpi-rover-rpi --lidar rplidar     # or --lidar coin
    ```
    The script updates the bootloader, enables the UARTs, installs the udev rules and Docker, downloads the
    robot image and starts it. It asks to reboot at the end. After the reboot the robot software starts
@@ -116,6 +229,7 @@ Run `setup` again at any time, e.g. to change `--lidar` or `--wheel-radius`. The
 ### Everyday work
 
 ```bash
+./rover.sh pc          # zellij in the pc container: ros2 tools, teleop (see below)
 ./rover.sh status      # what runs on the robot, from which commit
 ./rover.sh update      # update to the newest image
 ./rover.sh logs
@@ -137,20 +251,43 @@ domain: `ROS_DOMAIN_ID=0 ROS_STATIC_PEERS=<robot IP> ./rover.sh pc`.
 
 ### Testing your changes on the robot
 
-**A few packages: overlay.** Copies the packages to the robot and builds only them on top of the robot image:
-```bash
-./rover.sh overlay kpi_rover_hw
-```
-Inside the container:
-```bash
-colcon build --symlink-install && source install/setup.bash
-ros2 launch kpi_rover_bringup robot.launch.py
-```
-The robot software is stopped while you work in the overlay. Afterwards: `./rover.sh restart`.
-Remove the overlay with `./rover.sh overlay --clean`.
+There are two ways: an **overlay** for a few packages (minutes, no CI) and a **branch image** for a whole branch.
 
-If you change headers or interfaces of a package, add the packages that depend on it to the overlay too.
-A new dependency in `package.xml` is not in the image: use a branch image for that.
+**Overlay.** The robot image contains all packages built from `main`. The overlay is a small workspace on the
+robot (`~/kpi-rover/overlay`) with only the packages you changed. They are built on the robot and used instead
+of the same packages from the image.
+
+```mermaid
+flowchart LR
+    PC["PC: your packages in src/"] -- "./rover.sh overlay (copy)" --> O["Robot: ~/kpi-rover/overlay"]
+    O --> D["container dev on the robot:<br/>colcon build, ros2 launch"]
+```
+
+1. Change the code on the PC.
+2. Copy the packages to the robot and open a shell there:
+   ```bash
+   ./rover.sh overlay kpi_rover_hw          # several packages: ./rover.sh overlay pkg_a pkg_b
+   ```
+   This **stops the robot software** (the `dev` container needs the same devices) and opens zellij in the
+   `dev` container on the robot.
+3. Inside the container, build your packages and start the robot software with them:
+   ```bash
+   colcon build --symlink-install && source install/setup.bash
+   ros2 launch kpi_rover_bringup robot.launch.py
+   ```
+   For an application in `src/apps/`: start the platform like this in one pane, open another pane (`Alt n`)
+   and start your application there.
+4. To change the code again: stop it with `Ctrl c`, leave zellij with `Ctrl q`, change the code on the PC and
+   repeat from step 2. Only the changed files are rebuilt.
+5. When you are done: leave zellij (`Ctrl q`) and start the normal robot software again, it runs from the
+   image, without your changes:
+   ```bash
+   ./rover.sh restart
+   ./rover.sh overlay --clean    # optional: delete the overlay from the robot
+   ```
+
+If you change headers or interfaces (messages, services) of a package, add the packages that depend on it to
+the overlay too. A new dependency in `package.xml` is not in the image: use a branch image for that.
 
 **Whole branch: branch image.** Push the branch, open *Actions → Build images → Run workflow*, choose the
 branch. When the workflow is finished:
