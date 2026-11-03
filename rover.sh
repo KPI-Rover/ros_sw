@@ -25,6 +25,9 @@ Robot (the address is saved by `setup` in .rover, or set ROVER_HOST=user@host)
   overlay <pkg>...     copy packages to the robot and open a shell there to build and run them
   overlay --clean      remove the overlay from the robot
   rviz                 RViz on the PC, connected to the robot
+  wifi                 list the Wi-Fi networks saved on the robot
+  wifi <ssid>          add a Wi-Fi network to the robot (asks for the password), the old ones are kept
+  wifi --remove <name> remove a saved Wi-Fi network
   build                build the robot image on the robot from local sources (no CI), tag `local`
   doctor               collect diagnostics to paste into an issue
   ssh [command...]     ssh to the robot
@@ -172,6 +175,34 @@ cmd_rviz() {
   ROS_DOMAIN_ID=${domain:-0} ROS_STATIC_PEERS=$ip pc ros2 launch kpi_rover_bringup rviz.launch.py
 }
 
+# Wi-Fi networks of the robot are NetworkManager connections (Raspberry Pi OS). The password goes to the robot
+# only through stdin, so it does not appear in process lists or in sudo logs.
+cmd_wifi() {
+  local host
+  host=$(rover_host)
+  case "${1:-}" in
+    "")
+      ssh "$host" "nmcli -f NAME,TYPE,AUTOCONNECT,DEVICE connection show | awk 'NR == 1 || /wifi|wireless/'"
+      ;;
+    --remove)
+      [ $# -eq 2 ] || die "usage: ./rover.sh wifi --remove <name>"
+      ssh "$host" "sudo nmcli connection delete id $(printf '%q' "$2")"
+      ;;
+    *)
+      [ $# -eq 1 ] || die "usage: ./rover.sh wifi <ssid>"
+      local ssid=$1 password file
+      read -rsp "Password of $ssid: " password
+      echo
+      [ ${#password} -ge 8 ] && [ ${#password} -le 63 ] || die "a WPA password has 8..63 characters"
+      file="kpi-wifi-$(printf '%s' "$ssid" | tr -c 'A-Za-z0-9_-' '_').nmconnection"
+      printf '[connection]\nid=%s\nuuid=%s\ntype=wifi\nautoconnect=true\n\n[wifi]\nmode=infrastructure\nssid=%s\n\n[wifi-security]\nkey-mgmt=wpa-psk\npsk=%s\n\n[ipv4]\nmethod=auto\n\n[ipv6]\nmethod=auto\n' \
+        "$ssid" "$(cat /proc/sys/kernel/random/uuid)" "$ssid" "$password" |
+        ssh "$host" "sudo install -m 600 /dev/stdin /etc/NetworkManager/system-connections/$file && sudo nmcli connection reload"
+      echo "Saved. The robot connects to $ssid when it is in range (other saved networks are kept)."
+      ;;
+  esac
+}
+
 cmd_build() {
   local host revision
   host=$(rover_host)
@@ -231,6 +262,7 @@ case "$command" in
   logs) cmd_logs ;;
   overlay) cmd_overlay "$@" ;;
   rviz) cmd_rviz ;;
+  wifi) cmd_wifi "$@" ;;
   build) cmd_build ;;
   doctor) cmd_doctor ;;
   ssh) ssh -t "$(rover_host)" "$@" ;;
