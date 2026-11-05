@@ -3,7 +3,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Regi
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -17,6 +17,7 @@ def generate_launch_description():
     y_pose = LaunchConfiguration('y_pose')
     z_pose = LaunchConfiguration('z_pose')
     yaw_pose = LaunchConfiguration('yaw_pose')
+    robot_ns = LaunchConfiguration('robot_ns')
 
     declared_arguments = [
         DeclareLaunchArgument(
@@ -32,6 +33,14 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'nav', default_value='true',
             description='Start Nav2 (handles the RViz 2D Goal Pose)'),
+        DeclareLaunchArgument(
+            'robot_ns', default_value='',
+            description='Name of the robot in a simulation shared by several robots: its model, '
+                        'Gazebo topics and controller manager. The controller manager topics move under it '
+                        'and need a bridge from what runs the shared simulation'),
+        DeclareLaunchArgument(
+            'load_controllers', default_value='true',
+            description='Load the controllers; false when something else loads them'),
     ]
 
     # robot_state_publisher with the sim_mode URDF (gz_ros2_control plugin)
@@ -42,6 +51,7 @@ def generate_launch_description():
             'use_sim_time': 'true',
             'sim_mode': 'true',
             'wheel_radius': wheel_radius,
+            'robot_ns': robot_ns,
         }.items(),
     )
 
@@ -49,7 +59,7 @@ def generate_launch_description():
         package='ros_gz_sim',
         executable='create',
         arguments=[
-            '-name', 'kpi_rover',
+            '-name', PythonExpression(["'", robot_ns, "' or 'kpi_rover'"]),
             '-topic', 'robot_description',
             '-x', x_pose,
             '-y', y_pose,
@@ -59,11 +69,14 @@ def generate_launch_description():
         output='screen',
     )
 
+    # Relative Gazebo topics of the config get the namespace (<robot_ns>/scan), the ROS topics don't
     gz_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
+        namespace=robot_ns,
         parameters=[{
             'config_file': PathJoinSubstitution([pkg_bringup, 'config', 'gz_bridge.yaml']),
+            'expand_gz_topic_names': True,
         }],
         output='screen',
     )
@@ -71,7 +84,7 @@ def generate_launch_description():
     joint_state_broadcaster = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['joint_state_broadcaster', '--switch-timeout', '60'],
+        arguments=['joint_state_broadcaster', '-c', [robot_ns, '/controller_manager'], '--switch-timeout', '60'],
         output='screen',
     )
 
@@ -80,6 +93,7 @@ def generate_launch_description():
         executable='spawner',
         arguments=[
             'diff_drive_controller',
+            '-c', [robot_ns, '/controller_manager'],
             '--switch-timeout', '60',
             '--controller-ros-args', '-r /diff_drive_controller/odom:=/odom',
         ],
@@ -90,7 +104,7 @@ def generate_launch_description():
     spawn_controllers = RegisterEventHandler(OnProcessExit(
         target_action=spawn_robot,
         on_exit=[joint_state_broadcaster, diff_drive_controller],
-    ))
+    ), condition=IfCondition(LaunchConfiguration('load_controllers')))
 
     # Turns unstamped /cmd_vel (Nav2, teleop_twist_keyboard) into the stamped input of the controller
     twist_stamper = Node(

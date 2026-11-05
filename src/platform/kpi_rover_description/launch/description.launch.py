@@ -16,6 +16,7 @@ def generate_launch_description():
     serial_device = LaunchConfiguration('serial_device')
     baud_rate = LaunchConfiguration('baud_rate')
     wheel_radius = LaunchConfiguration('wheel_radius')
+    robot_ns = LaunchConfiguration('robot_ns')
 
     pkg_share = FindPackageShare('kpi_rover_description')
     
@@ -28,7 +29,8 @@ def generate_launch_description():
         ' sim_mode:=', sim_mode,
         ' serial_device:=', serial_device,
         ' baud_rate:=', baud_rate,
-        ' wheel_radius:=', wheel_radius
+        ' wheel_radius:=', wheel_radius,
+        ' robot_ns:=', robot_ns
     ])
 
     # Launch!
@@ -53,6 +55,10 @@ def generate_launch_description():
             'wheel_radius',
             default_value='0.034',
             description='Wheel radius in meters'),
+        DeclareLaunchArgument(
+            'robot_ns',
+            default_value='',
+            description='Name of the robot in a simulation shared by several robots (Gazebo topics, controller manager)'),
 
         Node(
             package='robot_state_publisher',
