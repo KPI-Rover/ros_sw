@@ -44,9 +44,11 @@
             </geometry>
             <material name="yellow"/>
         </visual>
+        <!-- A box of the mesh size, as the mesh (~600k triangles) collides with uneven ground very slowly -->
         <collision>
+            <origin xyz="0 0 0.032" rpy="0 0 0"/>
             <geometry>
-                <mesh filename = "package://kpi_rover_description/meshes/kpi_rover_body.stl" scale="0.001 0.001 0.001"/>
+                <box size="${base_x_size} ${base_y_size} 0.16"/>
             </geometry>
         </collision>
         <xacro:inertial_box mass="${base_mass}" x="${base_x_size}" y="${base_y_size}" z="${base_z_size}">
