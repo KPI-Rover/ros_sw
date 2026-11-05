@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+<!--
+  Walls for worlds: textured walls and perimeter walls, and the solid boxes
+  they are made of.
+
+  Usage:
+    <xacro:wall name="wall" x="0" y="0" yaw="0" length="3" material="brick"/>
+    <xacro:perimeter_walls size_x="15" size_y="8" material="concrete"/>
+-->
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="base.xacro"/>
+
+  <xacro:property name="walls_cfg" value="${xacro.load_yaml('$(find kpi_rover_worlds)/common/config/walls.yaml')}"/>
+  <!--
+    Textured box meshes {key: OBJ path} made by the world generator (see
+    textured_box.py): walls and arch parts with a mesh show their
+    texture at its real size; the others are built of box segments. A world
+    sets it after including this file.
+  -->
+  <xacro:property name="wall_meshes" value="${dict()}"/>
+
+  <!--
+    Box with matching collision and visual.
+
+    'view' sets how the Gazebo GUI shows the box; the robot always collides
+    with it and its sensors always see it:
+      solid       - as is;
+      transparent - semi-transparent;
+      hidden      - not shown;
+      marking     - as its footprint on the floor, 'footprint_scale' times as
+                    wide across (local Y).
+  -->
+  <!-- Box geometry: a textured box mesh (see wall_meshes), or a box primitive without one. -->
+  <xacro:macro name="box_geometry" params="sx sy sz mesh">
+    <xacro:if value="${mesh != ''}">
+      <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+    </xacro:if>
+    <xacro:unless value="${mesh != ''}">
+      <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+    </xacro:unless>
+  </xacro:macro>
+
+  <xacro:macro name="solid_box" params="name x y z sx sy sz color texture:='' mesh:='' pitch:=0 yaw:=0 view:=solid footprint_scale:=1">
+    <collision name="${name}_collision">
+      <pose>${x} ${y} ${z} 0 ${pitch} ${yaw}</pose>
+      <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+    </collision>
+    <visual name="${name}_visual">
+      <pose>${x} ${y} ${z} 0 ${pitch} ${yaw}</pose>
+      <xacro:box_geometry sx="${sx}" sy="${sy}" sz="${sz}" mesh="${mesh}"/>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <xacro:if value="${view != 'solid'}">
+        <visibility_flags>${visible_robot_only}</visibility_flags>
+      </xacro:if>
+    </visual>
+    <xacro:if value="${view == 'transparent'}">
+      <visual name="${name}_gui_visual">
+        <pose>${x} ${y} ${z} 0 ${pitch} ${yaw}</pose>
+        <xacro:box_geometry sx="${sx}" sy="${sy}" sz="${sz}" mesh="${mesh}"/>
+        <xacro:world_material color="${color}" texture="${texture}"/>
+        <transparency>0.7</transparency>
+        <visibility_flags>${visible_gui_only}</visibility_flags>
+      </visual>
+    </xacro:if>
+    <xacro:if value="${view == 'marking'}">
+      <visual name="${name}_footprint">
+        <pose>${x} ${y} 0.0015 0 0 ${yaw}</pose>
+        <geometry><box><size>${sx} ${sy * footprint_scale} 0.001</size></box></geometry>
+        <xacro:world_material color="${color}" texture=""/>
+        <visibility_flags>${visible_gui_only}</visibility_flags>
+      </visual>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Visual segments k..n-1 of a wall, see 'wall'. -->
+  <xacro:macro name="wall_segments" params="name k n x y yaw length height thickness color texture flags transparency:=0">
+    <xacro:property name="s" value="${length * ((k + 0.5) / n - 0.5)}"/>
+    <visual name="${name}_${k}">
+      <pose>${x + s * cos(yaw)} ${y + s * sin(yaw)} ${height / 2} 0 0 ${yaw}</pose>
+      <geometry><box><size>${length / n} ${thickness} ${height}</size></box></geometry>
+      <xacro:world_material color="${color}" texture="${texture}"/>
+      <xacro:if value="${transparency > 0}">
+        <transparency>${transparency}</transparency>
+      </xacro:if>
+      <visibility_flags>${flags}</visibility_flags>
+    </visual>
+    <xacro:if value="${k + 1 &lt; n}">
+      <xacro:wall_segments name="${name}" k="${k + 1}" n="${n}" x="${x}" y="${y}" yaw="${yaw}" length="${length}" height="${height}"
+          thickness="${thickness}" color="${color}" texture="${texture}" flags="${flags}" transparency="${transparency}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!--
+    Wall along local X, centered at (x, y) on the floor and rotated by 'yaw',
+    with a 'material' from walls.yaml. The world generator can give it a
+    textured box mesh (wall_meshes), which keeps the texture at its real
+    size; without one, as a box maps a texture onto its whole face, the
+    visible wall is built of segments about as long as the texture covers
+    ('segment' in walls.yaml). The collision is one box.
+    'view' sets how the Gazebo GUI shows the wall, see solid_box.
+  -->
+  <xacro:macro name="wall" params="name x y yaw length height:=0.5 thickness:=0.05 material:=plain view:=solid">
+    <xacro:property name="wall_cfg" value="${walls_cfg[material]}"/>
+    <xacro:property name="mesh" value="${wall_meshes.get('%.4fx%.4fx%.4f@%.4f/%s' % (length, thickness, height, 0, material), '')}"/>
+    <xacro:property name="n" value="${1 if wall_cfg['texture'] == '' or mesh != '' else max(1, int(round(length / wall_cfg['segment'])))}"/>
+    <collision name="${name}_collision">
+      <pose>${x} ${y} ${height / 2} 0 0 ${yaw}</pose>
+      <geometry><box><size>${length} ${thickness} ${height}</size></box></geometry>
+    </collision>
+    <xacro:if value="${mesh != ''}">
+      <visual name="${name}">
+        <pose>${x} ${y} ${height / 2} 0 0 ${yaw}</pose>
+        <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+        <xacro:world_material color="${wall_cfg['color']}" texture="${wall_cfg['texture']}"/>
+        <visibility_flags>${visible_all if view == 'solid' else visible_robot_only}</visibility_flags>
+      </visual>
+      <xacro:if value="${view == 'transparent'}">
+        <visual name="${name}_gui">
+          <pose>${x} ${y} ${height / 2} 0 0 ${yaw}</pose>
+          <geometry><mesh><uri>file://${mesh}</uri></mesh></geometry>
+          <xacro:world_material color="${wall_cfg['color']}" texture="${wall_cfg['texture']}"/>
+          <transparency>0.35</transparency>
+          <visibility_flags>${visible_gui_only}</visibility_flags>
+        </visual>
+      </xacro:if>
+    </xacro:if>
+    <xacro:unless value="${mesh != ''}">
+      <xacro:wall_segments name="${name}" k="0" n="${n}" x="${x}" y="${y}" yaw="${yaw}" length="${length}" height="${height}"
+          thickness="${thickness}" color="${wall_cfg['color']}" texture="${wall_cfg['texture']}"
+          flags="${visible_all if view == 'solid' else visible_robot_only}"/>
+      <xacro:if value="${view == 'transparent'}">
+        <xacro:wall_segments name="${name}_gui" k="0" n="${n}" x="${x}" y="${y}" yaw="${yaw}" length="${length}" height="${height}"
+            thickness="${thickness}" color="${wall_cfg['color']}" texture="${wall_cfg['texture']}" flags="${visible_gui_only}"
+            transparency="0.35"/>
+      </xacro:if>
+    </xacro:unless>
+    <xacro:if value="${view == 'marking'}">
+      <visual name="${name}_footprint">
+        <pose>${x} ${y} 0.0015 0 0 ${yaw}</pose>
+        <geometry><box><size>${length} ${thickness} 0.001</size></box></geometry>
+        <xacro:world_material color="${walls_cfg['plain']['color']}" texture=""/>
+        <visibility_flags>${visible_gui_only}</visibility_flags>
+      </visual>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Walls around a size_x x size_y area centered at the origin. -->
+  <xacro:macro name="perimeter_walls" params="size_x size_y height:=0.5 thickness:=0.1 material:=plain">
+    <model name="perimeter_walls">
+      <static>true</static>
+      <link name="link">
+        <xacro:wall name="north" x="0" y="${(size_y + thickness) / 2}" yaw="0" length="${size_x + 2 * thickness}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+        <xacro:wall name="south" x="0" y="${-(size_y + thickness) / 2}" yaw="${pi}" length="${size_x + 2 * thickness}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+        <xacro:wall name="east" x="${(size_x + thickness) / 2}" y="0" yaw="${pi / 2}" length="${size_y}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+        <xacro:wall name="west" x="${-(size_x + thickness) / 2}" y="0" yaw="${-pi / 2}" length="${size_y}"
+            height="${height}" thickness="${thickness}" material="${material}"/>
+      </link>
+    </model>
+  </xacro:macro>
+
+</sdf>
