@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="marking.xacro"/>
+
+  <!--
+    Named robot start point: a footprint outline with a heading arrow beside it.
+    Shown only in the Gazebo GUI, the robot camera does not see it. The launch
+    file finds start points by the 'start_point_' model name prefix and spawns
+    the robot at the selected one ('start' argument). 'z' is the ground height
+    there, for uneven ground.
+  -->
+  <xacro:macro name="start_point" params="name x y yaw z:=0">
+    <model name="start_point_${name}">
+      <static>true</static>
+      <pose>${x} ${y} ${z + 0.001} 0 0 ${yaw}</pose>
+      <link name="link">
+        <xacro:marking_line name="outline_front" x1="0.15" y1="-0.15" x2="0.15" y2="0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="outline_left" x1="0.15" y1="0.15" x2="-0.15" y2="0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="outline_back" x1="-0.15" y1="0.15" x2="-0.15" y2="-0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="outline_right" x1="-0.15" y1="-0.15" x2="0.15" y2="-0.15" style="green" width="0.01"
+            start="left" end="left" visibility="${visible_gui_only}"/>
+        <xacro:marking_line name="arrow_shaft" x1="-0.15" y1="-0.25" x2="0.15" y2="-0.25" style="green" width="0.02"
+            visibility="${visible_gui_only}"/>
+        <visual name="arrow_head">
+          <geometry>
+            <polyline>
+              <point>0.15 -0.31</point>
+              <point>0.27 -0.25</point>
+              <point>0.15 -0.19</point>
+              <height>0.001</height>
+            </polyline>
+          </geometry>
+          <xacro:world_material color="${markings['green']['color']}" texture=""/>
+          <visibility_flags>${visible_gui_only}</visibility_flags>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+</sdf>
