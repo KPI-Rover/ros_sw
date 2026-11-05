@@ -18,4 +18,11 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/common
 )
 
+# ros2 run kpi_rover_worlds render_previews.py | spawn_object.py
+install(PROGRAMS
+  tools/render_previews.py
+  tools/spawn_object.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()
