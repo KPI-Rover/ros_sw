@@ -1,0 +1,39 @@
+# Openings in maze walls, keyed by the letter used in maze grids (see generator.py).
+# Robot: about 0.26 m wide and 0.345 m high (top of the lidar), the lidar scans at 0.245 m.
+#
+# width    - clear opening width, m
+# height   - clear opening height, m; null for a doorway without a lintel
+# passable - whether the robot fits through
+
+D:
+  name: door
+  width: 0.55
+  height: null
+  passable: true
+
+A:
+  name: arch
+  width: 0.45
+  height: 0.45
+  passable: true
+
+# Fits the robot with about 3 cm to spare on each side and above.
+T:
+  name: tight_arch
+  width: 0.32
+  height: 0.38
+  passable: true
+
+N:
+  name: narrow_arch
+  width: 0.20
+  height: 0.45
+  passable: false
+
+# The lintel is above the lidar scan plane, so the opening looks free to the
+# lidar, but the robot hits it with its top.
+L:
+  name: low_arch
+  width: 0.45
+  height: 0.30
+  passable: false
