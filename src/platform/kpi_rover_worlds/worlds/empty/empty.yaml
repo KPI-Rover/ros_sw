@@ -1,0 +1,4 @@
+title: Empty world
+description: A flat ground plane without obstacles.
+previews:
+  map: {center: [0, 0], size: 10}
