@@ -147,6 +147,9 @@ its previews.
 `sim.launch.py` is `world.launch.py` (Gazebo with the world) and `sim_robot.launch.py` (the simulated robot with the
 same localization, SLAM and navigation as the real one) together, with RViz and joystick teleop; tools such as the
 GUI start them one by one.
+In a simulation shared by several robots each one gets `robot_ns:=<name>` of `sim_robot.launch.py`: it names
+the model, its Gazebo topics and its controller manager, the ROS topics stay the same. With `load_controllers:=false`
+the controllers are loaded by what runs the shared simulation (the arena of the KPI Rover hub).
 
 Keyboard control (second zellij pane):
 ```bash
