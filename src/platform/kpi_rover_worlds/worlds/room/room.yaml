@@ -1,0 +1,7 @@
+title: Room
+description: A 6×6 m room with three boxes; the default world of sim.launch.py.
+previews:
+  cameras:
+    over: [0, -5.6, 4.2, 0, 42, 90, 70]
+  world: over
+  map: {center: [0, 0], size: 7}
