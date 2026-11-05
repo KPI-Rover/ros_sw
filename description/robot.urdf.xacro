@@ -4,6 +4,7 @@
     <xacro:arg name="sim_mode" default="true"/>
     <xacro:arg name="ecu_ip" default="10.30.30.30"/>
     <xacro:arg name="ecu_port" default="6000"/>
+    <xacro:arg name="robot_ns" default=""/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />

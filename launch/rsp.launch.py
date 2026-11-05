@@ -13,11 +13,12 @@ def generate_launch_description():
     # Check if we're told to use sim time
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_ros2_control = LaunchConfiguration('use_ros2_control')
+    robot_ns = LaunchConfiguration('robot_ns')
 
     # Process the URDF file
     # pkg_path = get_package_share_directory('kpi_rover')
     xacro_file = PathJoinSubstitution([FindPackageShare('kpi_rover'), 'description', 'robot.urdf.xacro'])
-    robot_description_config = Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time])
+    robot_description_config = Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time, ' robot_ns:=', robot_ns])
 
     # Launch!
     return LaunchDescription([
@@ -29,6 +30,10 @@ def generate_launch_description():
             'use_ros2_control',
             default_value='true',
             description='Use ros2_control if true'),
+        DeclareLaunchArgument(
+            'robot_ns',
+            default_value='',
+            description='Namespace of the robot in a simulation shared by several robots; empty for one robot'),
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',

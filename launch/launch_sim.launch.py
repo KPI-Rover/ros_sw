@@ -70,7 +70,7 @@ def generate_launch_description():
 
     robot = GroupAction(condition=IfCondition(LaunchConfiguration('robot')), actions=[
         include(os.path.join(package_dir, 'launch', 'spawn_robot.launch.py'),
-                **{name: LaunchConfiguration(name) for name in POSE}),
+                **{name: LaunchConfiguration(name) for name in POSE + ('robot_ns', 'load_controllers')}),
         Node(
             package='robot_localization',
             executable='ekf_node',
@@ -101,6 +101,8 @@ def generate_launch_description():
         ('y_pose', '0.0', 'Robot spawn Y position'),
         ('z_pose', '0.0', 'Robot spawn Z position'),
         ('yaw_pose', '0.0', 'Robot spawn yaw in radians'),
+        ('robot_ns', '', 'Namespace of the robot in a simulation shared by several robots; empty for one robot'),
+        ('load_controllers', 'true', 'Load the controllers; false when something else loads them'),
     ]
 
     return LaunchDescription(

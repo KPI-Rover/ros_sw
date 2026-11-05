@@ -65,6 +65,7 @@
             <!-- Joint state publisher -->
             <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
             <parameters>$(find kpi_rover)/config/kpi_rover_controllers.yaml</parameters>
+            <ros><namespace>$(arg robot_ns)</namespace></ros>
             </plugin>
         </gazebo>
     </xacro:if>
