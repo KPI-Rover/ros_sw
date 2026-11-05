@@ -1,0 +1,16 @@
+# Garden world scale and layout.
+#
+# The idea: the garden is modeled as a real place in real sizes (relief,
+# trees, rows, road, pits), then the whole world is scaled down uniformly to
+# the proportions of the KPI Rover, so that the trees are tree_height_robots
+# robot heights tall. All real sizes in the garden code are multiplied by
+# scale = robot_height * tree_height_robots / real_tree_height.
+
+robot_height: 0.345         # KPI Rover height with the lidar, m
+tree_height_robots: 4       # tree height in robot heights
+real_tree_height: 4.0       # real height of an orchard tree, m
+
+# Real place of the steppe relief: 47.0787331, 33.1950273 (an orchard in the
+# Kherson steppe). World axes are the standard ones: x east, y north; the
+# tree rows will go along x.
+row_spacing: 5.5            # real distance between tree rows, m
