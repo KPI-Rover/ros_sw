@@ -61,6 +61,7 @@ maintainers and runs on every robot after boot.
 | `kpi_rover_localization` | EKF (`robot_localization`): fuses wheel odometry and IMU |
 | `kpi_rover_slam` | `slam_toolbox`: builds the map from the lidar and localizes the robot on it |
 | `kpi_rover_bringup` | launch files and configs: `robot.launch.py` (real robot), `sim.launch.py` (Gazebo), Nav2, lidar, joystick |
+| `kpi_rover_worlds` | Gazebo worlds for the simulation, configurable ones with their arguments, start points and previews. Not installed on the robot |
 
 **`src/apps/`** is for applications. An application does not drive motors or read sensors directly: it uses
 the platform topics, actions and services (`/cmd_vel`, Nav2, `/scan`, `/map`, ...), so the same application
@@ -131,6 +132,21 @@ colcon build --symlink-install
 source install/setup.bash
 ros2 launch kpi_rover_bringup sim.launch.py
 ```
+
+**Worlds.** `world:=` takes a world of `kpi_rover_worlds` by name (`room` by default) or a path to a world file,
+`start:=` puts the robot at one of the start points of the world instead of `x_pose`/`y_pose`. A configurable world
+(`garden`, `maze`, `overpass`, `test_square`) given by name has its default arguments; with other ones, build it first:
+```bash
+python3 -m kpi_rover_worlds.world_info          # worlds, their arguments and defaults
+ros2 launch kpi_rover_bringup sim.launch.py world:=garden start:=road_a
+ros2 launch kpi_rover_bringup sim.launch.py start:=a \
+  world:=$(python3 -m kpi_rover_worlds.world_info --build test_square floor:=asphalt marking:=yellow)
+```
+A world is a directory `worlds/<name>/` of `kpi_rover_worlds`: the world file, its manifest `<name>.yaml` and
+its previews.
+`sim.launch.py` is `world.launch.py` (Gazebo with the world) and `sim_robot.launch.py` (the simulated robot with the
+same localization, SLAM and navigation as the real one) together, with RViz and joystick teleop; tools such as the
+GUI start them one by one.
 
 Keyboard control (second zellij pane):
 ```bash

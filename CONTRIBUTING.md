@@ -49,7 +49,7 @@ The PR title becomes the commit message in `main`, so it follows
   | `revert` | revert of a previous change |
 
 - **scope** (optional) — the part of the project, lower case: a package without the `kpi_rover_` prefix
-  (`hw`, `description`, `bringup`, `localization`, `slam`), `nav`, `sim`, `docker`, `rover` (rover.sh),
+  (`hw`, `description`, `bringup`, `localization`, `slam`, `worlds`), `nav`, `sim`, `docker`, `rover` (rover.sh),
   `rpi-setup`, or the name of an application in `src/apps/`.
 - **description** — in English, imperative mood, lower case first letter, no period at the end:
   "add", not "added" or "adds".
