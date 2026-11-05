@@ -15,9 +15,6 @@ Photo textures from [Poly Haven](https://polyhaven.com), licensed [CC0](https://
 | wall_concrete | [concrete_wall_007](https://polyhaven.com/a/concrete_wall_007) | Dario Barresi, Rico Cilliers, Charlotte Baglioni | 2.16 |
 | wall_wood | [wood_planks](https://polyhaven.com/a/wood_planks) | Amal Kumar | 1.50 |
 | wall_metal | [corrugated_iron](https://polyhaven.com/a/corrugated_iron) | Jenelle van Heerden, Dimitrios Savva | 1.12 |
-| ground_sand | [sand_01](https://polyhaven.com/a/sand_01) | Rob Tuytel | 1.50 |
-| ground_gravel | [gravel_floor_02](https://polyhaven.com/a/gravel_floor_02) | Jenelle van Heerden, Dimitrios Savva | 2.00 |
-| ground_rubble | [rock_ground](https://polyhaven.com/a/rock_ground) | Rob Tuytel | 1.50 |
 | ground_meadow | [grass_ground](https://polyhaven.com/a/grass_ground) | Charlotte Baglioni | 2.51 |
 | ground_loose_soil | [farm_soil](https://polyhaven.com/a/farm_soil) | Amal Kumar | 2.00 |
 | ground_forest_mud | [mud_forest](https://polyhaven.com/a/mud_forest) | eye-candy.xyz | 2.35 |

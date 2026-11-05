@@ -20,18 +20,21 @@ groups:
 args:
   relief:
     type: choice
+    default: steppe
     choices: [steppe, hills]
     label: Relief
     description: steppe — the real, almost flat place; hills — made-up hills.
     group: terrain
   terrain_seed:
     type: int
+    default: 11
     min: 0
     label: Terrain variant
     description: One number sets the small relief, the ground patches, the pits and the grass; the same number gives the same garden.
     group: terrain
   grass:
     type: float
+    default: 1.0
     min: 0.0
     max: 3.0
     step: 0.1
@@ -40,6 +43,7 @@ args:
     group: grounds
   soil:
     type: float
+    default: 0.13
     min: 0.0
     max: 0.4
     step: 0.01
@@ -48,6 +52,7 @@ args:
     group: grounds
   mud:
     type: float
+    default: 0.12
     min: 0.0
     max: 0.4
     step: 0.01
@@ -56,16 +61,19 @@ args:
     group: grounds
   pits:
     type: bool
+    default: true
     label: Pits in the orchard
     description: Four pits between the rows, 5–17 cm deep, two of them with water.
     group: obstacles
   puddles:
     type: bool
+    default: true
     label: Puddles on the road
     description: Three puddles in the road ruts.
     group: obstacles
   tree_rows:
     type: int
+    default: 6
     min: 0
     max: 7
     label: Tree rows
@@ -74,6 +82,7 @@ args:
   grass_friction:
     advanced: true
     type: float
+    default: 0.65
     min: 0.05
     max: 1.5
     step: 0.05
@@ -82,6 +91,7 @@ args:
   mud_friction:
     advanced: true
     type: float
+    default: 0.3
     min: 0.05
     max: 1.5
     step: 0.05
@@ -90,6 +100,7 @@ args:
   track_friction:
     advanced: true
     type: float
+    default: 0.85
     min: 0.05
     max: 1.5
     step: 0.05
@@ -98,11 +109,13 @@ args:
   shadows:
     advanced: true
     type: bool
+    default: true
     label: Shadows
     description: Sun shadows; without them the simulation is a bit faster.
     group: render
   objects:
     type: int
+    default: 0
     min: 0
     max: 50
     label: Objects
@@ -110,11 +123,10 @@ args:
     group: objects
   objects_seed:
     type: string
+    default: ''
     label: Objects layout
     description: A number sets where the objects lie; empty — a new random layout every time.
     group: objects
-  terrain: {internal: true}
-  layout: {internal: true}
 presets:
   light:
     label: Light

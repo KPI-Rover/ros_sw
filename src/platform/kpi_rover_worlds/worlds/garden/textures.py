@@ -79,7 +79,7 @@ def make(texture, out_dir, name, seed):
     yy += _periodic_noise(SIZE, GRID * 4, rng).astype(np.float32) * cell * 0.25
 
     def weight(k):
-        cx, cy = centers[k]
+        cx, cy = (float(c) for c in centers[k])
         dx = (xx - cx + SIZE / 2) % SIZE - SIZE / 2
         dy = (yy - cy + SIZE / 2) % SIZE - SIZE / 2
         return np.exp(-SHARPNESS * (dx * dx + dy * dy) / (cell * cell))
@@ -87,17 +87,18 @@ def make(texture, out_dir, name, seed):
     brightness = 1 + BRIGHTNESS * _periodic_noise(SIZE, GRID, rng) + BRIGHTNESS / 2 * _periodic_noise(SIZE, GRID * 3, rng)
 
     src = os.path.join(TEXTURES_DIR, texture, texture)
-    for kind in ('albedo', 'normal', 'roughness'):
-        img = Image.open(f'{src}_{kind}.jpg').convert('RGB').resize((cell, cell), Image.LANCZOS)
-        img = np.asarray(img).astype(np.float32) / 255
-        out = np.zeros((SIZE, SIZE, 3), np.float32)
-        total = np.zeros((SIZE, SIZE), np.float32)
-        for k in range(GRID * GRID):
-            v = _variant(img, kinds[k], kind == 'normal')
-            v = np.roll(v, tuple(shifts[k]), axis=(0, 1))
-            w = weight(k)
+    kinds_out = ('albedo', 'normal', 'roughness')
+    imgs = [np.asarray(Image.open(f'{src}_{kind}.jpg').convert('RGB').resize((cell, cell), Image.LANCZOS))
+            .astype(np.float32) / 255 for kind in kinds_out]
+    outs = [np.zeros((SIZE, SIZE, 3), np.float32) for _ in kinds_out]
+    total = np.zeros((SIZE, SIZE), np.float32)
+    for k in range(GRID * GRID):
+        w = weight(k)
+        total += w
+        for kind, img, out in zip(kinds_out, imgs, outs):
+            v = np.roll(_variant(img, kinds[k], kind == 'normal'), tuple(shifts[k]), axis=(0, 1))
             out += w[..., None] * np.tile(v, (GRID, GRID, 1))
-            total += w
+    for kind, out in zip(kinds_out, outs):
         out /= total[..., None]
         if kind == 'normal':
             # Blending shortens the normals; make them unit length again.

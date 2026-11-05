@@ -15,29 +15,33 @@ args:
   maze:
     type: choice
     choices: [level1, level2, level3, random]
+    default: level1
     label: Maze
-    description: A ready level (config/levels) or random — a random maze.
+    description: A ready level (levels/) or random — a random maze.
     group: maze
-  seed: {type: int, min: 0, label: Random maze variant, group: maze, show_if: {maze: random}}
+  seed: {type: int, min: 0, default: 0, label: Random maze variant, group: maze, show_if: {maze: random}}
   difficulty:
     type: choice
     choices: [easy, medium, hard]
+    default: medium
     label: Random maze difficulty
     description: The size of the random maze and how many tight and impassable arches it has.
     group: maze
     show_if: {maze: random}
-  route: {type: bool, label: Show route, description: A blue line of the shortest path, visible only in the Gazebo GUI., group: maze}
-  floor: {type: choice, choices_from: floors, label: Floor, group: look}
-  wall_material: {type: choice, choices_from: walls, label: Walls, group: look}
+  route: {type: bool, default: true, label: Show route, description: "A blue line of the shortest path, visible only in the Gazebo GUI.", group: maze}
+  floor: {type: choice, choices_from: floors, default: concrete, label: Floor, group: look}
+  wall_material: {type: choice, choices_from: walls, default: brick, label: Walls, group: look}
   arch_material:
     type: choice
     choices: [contrast, plain, plaster, brick, concrete, wood, metal]
+    default: contrast
     label: Arches and narrow openings
     description: contrast — a plain color that stands out from the walls; or a wall material.
     group: look
   wall_view:
     type: choice
     choices: [solid, transparent, hidden, marking]
+    default: transparent
     label: Walls in the Gazebo GUI
     description: How the GUI shows the walls; the robot always bumps into them and the sensors see them.
     group: look
@@ -45,11 +49,11 @@ args:
     type: int
     min: 0
     max: 50
+    default: 14
     label: Objects
     description: Number of boxes, crates, cones and other objects scattered around the maze; some are low, under the lidar, and a flat board can be driven over.
     group: objects
-  objects_seed: {type: string, label: Layout variant, description: Empty — a new random one every time., group: objects}
-  layout: {internal: true}
+  objects_seed: {type: string, default: '', label: Layout variant, description: Empty — a new random one every time., group: objects}
 presets:
   random_easy:
     label: Random, easy

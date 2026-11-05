@@ -7,42 +7,24 @@ simulation, or take them away, e.g. for a GUI placing them on a map.
     ros2 run kpi_rover_worlds spawn_object.py --world garden --name box_1 --type cardboard_box_01 --x 1 --y 2 --z 0.05 --yaw 0.5 --scale 0.345
     ros2 run kpi_rover_worlds spawn_object.py --world garden --remove box_1
 
-The object is the same model the worlds scatter (common/xacro/objects.xacro); its
+The object is the same model the worlds scatter (sdf.scatter_object); its
 origin is on the ground under its center, so z is the ground height there.
-Needs a sourced ROS environment (xacro, ros_gz_sim, gz).
+Needs a sourced ROS environment (ros_gz_sim, gz).
 """
 
 import argparse
 import json
-import os
 import subprocess
 import sys
-import tempfile
+import xml.etree.ElementTree as ET
 
-import yaml
-
-from kpi_rover_worlds.world_info import CONFIG_DIR, SHARE_DIR
-
-
-def library():
-    with open(os.path.join(CONFIG_DIR, 'objects.yaml')) as f:
-        return yaml.safe_load(f)
+from kpi_rover_worlds import sdf
 
 
 def model_sdf(name, kind, scale=1.0):
-    """SDF of one library object at the origin, scaled by 'scale'."""
-    import xacro
-    document = f'''<?xml version="1.0"?>
-<sdf version="1.9" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:include filename="{os.path.join(SHARE_DIR, 'common', 'xacro', 'objects.xacro')}"/>
-  <xacro:scatter_object name="{name}" type="{kind}" x="0" y="0" yaw="0" scale="{scale}"/>
-</sdf>'''
-    with tempfile.NamedTemporaryFile('w', suffix='.world.xacro', delete=False) as f:
-        f.write(document)
-    try:
-        return xacro.process_file(f.name).toxml()
-    finally:
-        os.unlink(f.name)
+    root = ET.Element('sdf', version='1.9')
+    sdf.scatter_object(root, name, kind, 0, 0, 0, scale=scale)
+    return sdf.to_string(root)
 
 
 def spawn(world, name, kind, x, y, z, yaw, scale=1.0):
@@ -71,13 +53,13 @@ def main():
     parser.add_argument('--remove', metavar='NAME', help='take this object away')
     options = parser.parse_args()
     if options.list:
-        print(json.dumps([dict(name=k, kind=v['kind'], size=v['size']) for k, v in library().items()]))
+        print(json.dumps([dict(name=k, kind=v['kind'], size=v['size']) for k, v in sdf.OBJECTS.items()]))
         return
     if not options.world:
         sys.exit('--world is needed')
     if options.remove:
         sys.exit(remove(options.world, options.remove))
-    if options.type not in library():
+    if options.type not in sdf.OBJECTS:
         sys.exit(f"Unknown object type {options.type}; see --list")
     sys.exit(spawn(options.world, options.name or options.type, options.type, options.x, options.y, options.z,
                    options.yaw, options.scale))

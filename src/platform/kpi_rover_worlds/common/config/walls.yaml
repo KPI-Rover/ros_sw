@@ -1,4 +1,4 @@
-# Wall materials available for walls built with the 'wall' macro (walls.xacro).
+# Wall materials of sdf.wall and sdf.solid_box.
 #
 # texture - photo texture directory in assets/textures (see its CREDITS.md),
 #           made for walls 0.5 m high. Empty for a plain colored wall.

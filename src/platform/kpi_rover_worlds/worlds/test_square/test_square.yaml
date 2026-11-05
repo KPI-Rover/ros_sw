@@ -3,8 +3,8 @@ description: A 1×1 m square marked on the floor to check motion and odometry ac
 start_points:
   a: Square corner
 args:
-  floor: {type: choice, choices_from: floors, label: Floor}
-  marking: {type: choice, choices_from: markings, label: Marking}
+  floor: {type: choice, choices_from: floors, default: wood, label: Floor}
+  marking: {type: choice, choices_from: markings, default: white, label: Marking}
 previews:
   cameras:
     over: [-1.1, -1.1, 1.2, 0, 32, 45, 62]

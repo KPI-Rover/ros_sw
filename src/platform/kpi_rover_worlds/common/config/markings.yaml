@@ -1,4 +1,4 @@
-# Marking styles available in worlds built with the 'marking_line' macro (marking.xacro).
+# Marking styles of sdf.marking_line and sdf.marking_arc.
 #
 # texture - file from assets/textures with a stripe pattern. One texture
 #           covers a segment 4 line widths long and is repeated along the line.

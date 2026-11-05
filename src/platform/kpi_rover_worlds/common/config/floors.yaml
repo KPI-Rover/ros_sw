@@ -1,4 +1,4 @@
-# Floor types available in worlds built with the 'floor' macro (floor.xacro).
+# Floor types of sdf.floor.
 #
 # texture  - photo texture directory in assets/textures (see its CREDITS.md),
 #            covering one 'tile' x 'tile' m square. Empty for a plain colored floor.

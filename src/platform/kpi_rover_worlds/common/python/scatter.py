@@ -19,26 +19,18 @@ cut off a part of the area.
 """
 
 import math
-import os
 import random
-from collections import deque
+import sys
 
 import numpy as np
-import yaml
+from scipy import ndimage
 
-from .world_info import CONFIG_DIR
+from .sdf import OBJECTS
 
 RESOLUTION = 0.05     # grid cell size, m
 ROBOT_RADIUS = 0.2    # robot footprint radius (0.27 x 0.26 m), m
 GAP = 0.05            # minimal gap between objects and keep-out shapes, m
 ATTEMPTS = 200        # placement attempts per object
-
-OBJECTS_YAML = os.path.join(CONFIG_DIR, 'objects.yaml')
-
-
-def load_library():
-    with open(OBJECTS_YAML) as f:
-        return yaml.safe_load(f)
 
 
 class Grid:
@@ -88,22 +80,7 @@ class Grid:
 
 def components(free):
     """Number of 4-connected components of free cells."""
-    seen = np.zeros_like(free)
-    count = 0
-    nx, ny = free.shape
-    for i, j in zip(*np.nonzero(free)):
-        if seen[i, j]:
-            continue
-        count += 1
-        seen[i, j] = True
-        queue = deque([(i, j)])
-        while queue:
-            a, b = queue.popleft()
-            for c, d in ((a + 1, b), (a - 1, b), (a, b + 1), (a, b - 1)):
-                if 0 <= c < nx and 0 <= d < ny and free[c, d] and not seen[c, d]:
-                    seen[c, d] = True
-                    queue.append((c, d))
-    return count
+    return ndimage.label(free)[1]   # the default structure of ndimage.label is 4-connectivity in 2D
 
 
 def scatter(rng, area, keep_out, obstacles, count, scale=1.0):
@@ -112,17 +89,18 @@ def scatter(rng, area, keep_out, obstacles, count, scale=1.0):
     scaled by 'scale' (for a scaled-down world).
     Returns ([[type, x, y, yaw], ...], number of objects that did not fit).
     """
-    library = load_library()
-    types = sorted(library)
+    types = sorted(OBJECTS)
     grid = Grid(*area)
     blocked = grid.mask(keep_out) | grid.mask(obstacles)
     fixed = grid.mask(obstacles, ROBOT_RADIUS) | grid.border(ROBOT_RADIUS)
     baseline = components(~fixed)
+    # Cells the robot cannot reach the center of: 'fixed' and the placed objects, inflated by the robot radius.
+    occupied = fixed.copy()
 
     placed, shapes, skipped = [], [], 0
     for _ in range(count):
         type_ = rng.choice(types)
-        sx, sy = (s * scale for s in library[type_]['size'][:2])
+        sx, sy = (s * scale for s in OBJECTS[type_]['size'][:2])
         radius = math.hypot(sx, sy) / 2
         for _ in range(ATTEMPTS):
             x = rng.uniform(area[0] + radius, area[1] - radius)
@@ -131,11 +109,12 @@ def scatter(rng, area, keep_out, obstacles, count, scale=1.0):
                 continue
             if grid.mask([('circle', x, y, radius)], GAP)[blocked].any():
                 continue
-            candidate = shapes + [('circle', x, y, radius)]
-            free = ~(fixed | grid.mask(candidate, ROBOT_RADIUS))
-            if components(free) > baseline:
+            circle = ('circle', x, y, radius)
+            with_object = occupied | grid.mask([circle], ROBOT_RADIUS)
+            if components(~with_object) > baseline:
                 continue
-            shapes = candidate
+            shapes.append(circle)
+            occupied = with_object
             placed.append([type_, round(x, 3), round(y, 3), round(rng.uniform(-math.pi, math.pi), 3)])
             break
         else:
@@ -153,5 +132,5 @@ def scatter_from_args(args, area, keep_out, obstacles, label, scale=1.0):
     rng = random.Random(f'objects:{seed}')
     placed, skipped = scatter(rng, area, keep_out, obstacles, int(args.get('objects', 0)), scale)
     note = f', {skipped} did not fit' if skipped else ''
-    print(f'[{label}] objects_seed:={seed}: {len(placed)} objects placed{note}', flush=True)
+    print(f'[{label}] objects_seed:={seed}: {len(placed)} objects placed{note}', file=sys.stderr, flush=True)
     return placed
