@@ -25,7 +25,7 @@ def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument(
             'world',
-            default_value=PathJoinSubstitution([pkg_bringup, 'worlds', 'room.world']),
+            default_value=PathJoinSubstitution([FindPackageShare('kpi_rover_worlds'), 'worlds', 'room', 'room.world']),
             description='Path to the Gazebo world file'),
         DeclareLaunchArgument(
             'wheel_radius', default_value='0.034',
