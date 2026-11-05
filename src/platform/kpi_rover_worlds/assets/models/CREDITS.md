@@ -14,7 +14,7 @@ Models from [Poly Haven](https://polyhaven.com), licensed [CC0](https://polyhave
 | [medical_box](https://polyhaven.com/a/medical_box) | Ulan Cabanilla |
 | [can_rusted](https://polyhaven.com/a/can_rusted) | Rahul Chaudhary |
 | [oil_tin](https://polyhaven.com/a/oil_tin) | Niklas |
-| [grass_medium_01](https://polyhaven.com/a/grass_medium_01) | Rob Tuytel, Rico Cilliers |
-| [grass_medium_02](https://polyhaven.com/a/grass_medium_02) | Rico Cilliers |
-| [grass_bermuda_01](https://polyhaven.com/a/grass_bermuda_01) | Rico Cilliers |
+| [grass_medium_01](https://polyhaven.com/a/grass_medium_01) (grass cards) | Rob Tuytel, Rico Cilliers |
+| [grass_medium_02](https://polyhaven.com/a/grass_medium_02) (grass cards) | Rico Cilliers |
+| [grass_bermuda_01](https://polyhaven.com/a/grass_bermuda_01) (grass cards) | Rico Cilliers |
 | [island_tree_02](https://polyhaven.com/a/island_tree_02) (leaves) | Rob Tuytel, Rico Cilliers |

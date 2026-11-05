@@ -1,13 +1,12 @@
 """
 Trees of the garden: apple tree models (made with Blender's Sapling Tree Gen),
-listed in config/trees.yaml, planted in rows and scaled down to the robot
-(see config/params.yaml).
+planted in rows and scaled down to the robot (SCALE).
 
 Each tree is one of the models, turned and sized at random; a few are
 missing or younger, as in a real orchard. The wood gets the bark photo
 texture of assets/textures in real size, each triangle projected onto
 its own plane with v along the branch. The leaf cards of the model get the
-leaf cluster pictures (config/plants.yaml), a random one on each card, mirrored
+leaf cluster pictures (CLUSTERS), a random one on each card, mirrored
 at random. Both sides of a card are separate faces with normals pointing
 away from the crown middle, so the crown is lit as one rounded mass from
 any side (a two-sided material would make the back sides dark).
@@ -16,8 +15,7 @@ All trees of a model go into one wood mesh, and all leaves into one mesh, to
 keep the drawing cheap. The robot collides with the stems only: cylinders up
 to above the robot, where the crowns begin.
 
-Trees stand in rows along x, row_spacing (params.yaml) apart, TREE_SPACING
-apart in a row.
+Trees stand in rows along x, ROW_SPACING apart, TREE_SPACING apart in a row.
 """
 
 import math
@@ -32,14 +30,20 @@ from kpi_rover_worlds import gltf
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(HERE, '..', '..', 'assets')
 
-with open(os.path.join(HERE, 'config', 'params.yaml')) as f:
-    PARAMS = yaml.safe_load(f)
-with open(os.path.join(HERE, 'config', 'trees.yaml')) as f:
-    MODELS = yaml.safe_load(f)['models']
-SCALE = PARAMS['robot_height'] * PARAMS['tree_height_robots'] / PARAMS['real_tree_height']
+# The garden is modeled in real sizes, then scaled down so that a real orchard
+# tree is TREE_HEIGHT_ROBOTS robot heights (0.345 m with the lidar) tall.
+TREE_HEIGHT_ROBOTS = 4
+REAL_TREE_HEIGHT = 4.0
+SCALE = 0.345 * TREE_HEIGHT_ROBOTS / REAL_TREE_HEIGHT
+ROW_SPACING = 5.5       # real distance between tree rows, m
+
+# Models in assets/models/<name>/: <name>_wood.gltf, <name>_leaves.yaml; their real stem radius, m.
+STEM_RADIUS = {'apple_1': 0.134, 'apple_2': 0.1, 'apple_3': 0.124, 'apple_4': 0.118}
+CLUSTERS = 'models/apple_leaves/apple_clusters.png'     # leaf cluster pictures side by side
+CLUSTER_VARIANTS = 4
 
 GARDEN_HALF_X = 6.0     # half length of the rows, world m
-ROWS = 6
+ROWS = 6                # tree rows by default (the tree_rows world argument)
 TREE_SPACING = 4.5      # real distance between trees in a row, m
 JITTER = 0.15           # real random offset of a tree from its place, m
 SIZE = (0.9, 1.1)       # random size of a tree
@@ -50,15 +54,15 @@ BARK = 'tree_bark'      # bark photo texture in assets/textures
 BARK_TILE = 2.15        # real size one bark texture repeat covers, m (see textures/CREDITS.md)
 
 
-def layout(seed):
-    """Tree places: [(x, y, young)] in world m."""
+def layout(seed, rows=ROWS):
+    """Tree places in 'rows' rows: [(x, y, young)] in world m."""
     rng = np.random.default_rng(seed * 7 + 9)
-    spacing_y = PARAMS['row_spacing'] * SCALE
+    spacing_y = ROW_SPACING * SCALE
     spacing_x = TREE_SPACING * SCALE
     count_x = int(2 * GARDEN_HALF_X / spacing_x) + 1
     places = []
-    for row in range(ROWS):
-        y = (row - (ROWS - 1) / 2) * spacing_y
+    for row in range(rows):
+        y = (row - (rows - 1) / 2) * spacing_y
         for i in range(count_x):
             x = (i - (count_x - 1) / 2) * spacing_x
             r = rng.uniform(0, 1)
@@ -88,28 +92,27 @@ def bark_uvs(p, f):
 
 def load(name):
     """Wood arrays with bark UVs, and leaf cards of a tree model."""
-    model = MODELS[name]
-    g, buffers = gltf.read(os.path.join(ASSETS_DIR, model['wood']))
+    g, buffers = gltf.read(os.path.join(ASSETS_DIR, 'models', name, f'{name}_wood.gltf'))
     p, n, _, f = gltf.mesh_data(g, buffers, g['nodes'][0]['mesh'])
     # Vertices are separate for each triangle, so each can have its own projection.
     wood = (p, n, bark_uvs(p, f), f)
-    with open(os.path.join(ASSETS_DIR, model['leaves'])) as f:
-        leaves = yaml.safe_load(f)
+    with open(os.path.join(ASSETS_DIR, 'models', name, f'{name}_leaves.yaml')) as f:
+        leaves = yaml.load(f, yaml.CSafeLoader)
     cards = tuple(np.array(leaves[k], float) for k in ('centers', 'u', 'v'))
     return wood, cards
 
 
-def build(out_dir, key, z_at, seed, clusters):
+def build(out_dir, key, z_at, seed, rows=ROWS):
     """
-    Build all trees: write the wood and leaves glTFs into out_dir and return
-    {wood: [{name, mesh, texture, color}], leaves, stems: [{x, y, z, radius}], count, cards}.
+    Build all trees in 'rows' rows: write the wood and leaves glTFs into out_dir and return
+    {wood: [{name, mesh, texture, color}], leaves, stems: [{x, y, z, radius}]}.
     """
     rng = np.random.default_rng(seed * 7 + 10)
-    names = sorted(MODELS)
+    names = sorted(STEM_RADIUS)
     models = {name: load(name) for name in names}
-    places = layout(seed)
+    places = layout(seed, rows)
     if not places:
-        return dict(wood=[], leaves='', stems=[], count=0, cards=0)
+        return dict(wood=[], leaves='', stems=[])
     zs = z_at(np.array([p[0] for p in places]), np.array([p[1] for p in places]))
     wood_parts = {name: [] for name in names}
     centers, us, vs, mids, stems = [], [], [], [], []
@@ -128,7 +131,7 @@ def build(out_dir, key, z_at, seed, clusters):
         us.append(u @ rot.T * k)
         vs.append(v @ rot.T * k)
         mids.append(np.repeat([middle], len(c), 0))
-        stems.append(dict(x=float(x), y=float(y), z=float(z), radius=round(float(MODELS[name]['stem_radius'] * k), 4)))
+        stems.append(dict(x=float(x), y=float(y), z=float(z), radius=round(float(STEM_RADIUS[name] * k), 4)))
 
     wood = []
     for name, parts in wood_parts.items():
@@ -152,8 +155,8 @@ def build(out_dir, key, z_at, seed, clusters):
     normals = corners - mid[:, None, :]
     normals[..., 2] += 0.3 * np.linalg.norm(normals, axis=-1)      # crowns are lit more from above
     normals /= np.linalg.norm(normals, axis=-1, keepdims=True)
-    variant = rng.integers(0, clusters['variants'], m)
-    u0, u1 = variant / clusters['variants'], (variant + 1) / clusters['variants']
+    variant = rng.integers(0, CLUSTER_VARIANTS, m)
+    u0, u1 = variant / CLUSTER_VARIANTS, (variant + 1) / CLUSTER_VARIANTS
     uvs = np.stack([np.stack([u0, np.ones(m)], -1), np.stack([u1, np.ones(m)], -1),
                     np.stack([u1, np.zeros(m)], -1), np.stack([u0, np.zeros(m)], -1)], 1)
     # Both sides as separate faces with the same normals.
@@ -163,12 +166,12 @@ def build(out_dir, key, z_at, seed, clusters):
     q = np.arange(m)[:, None] * 4
     back = q + m * 4
     faces = np.concatenate([q + [0, 1, 2], q + [0, 2, 3], back + [0, 2, 1], back + [0, 3, 2]])
-    atlas = os.path.basename(clusters['atlas'])
-    shutil.copy(os.path.join(ASSETS_DIR, clusters['atlas']), os.path.join(out_dir, atlas))
+    atlas = os.path.basename(CLUSTERS)
+    shutil.copy(os.path.join(ASSETS_DIR, CLUSTERS), os.path.join(out_dir, atlas))
     material = dict(name='apple_leaves', alphaMode='MASK', alphaCutoff=0.5,
                     pbrMetallicRoughness=dict(baseColorTexture=dict(index=0), metallicFactor=0.0, roughnessFactor=0.8))
     leaves = os.path.join(out_dir, f'trees_leaves_{key}.gltf')
     gltf.write(leaves, corners.reshape(-1, 3), normals.reshape(-1, 3), uvs.reshape(-1, 2), faces,
                material=material, images=[atlas])
 
-    return dict(wood=wood, leaves=leaves, stems=stems, count=len(places), cards=m)
+    return dict(wood=wood, leaves=leaves, stems=stems)

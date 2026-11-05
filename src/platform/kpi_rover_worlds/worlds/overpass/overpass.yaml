@@ -11,46 +11,51 @@ groups:
   route: Route
   objects: Objects
 args:
-  floor: {type: choice, choices_from: floors, label: Floor, group: look}
-  marking: {type: choice, choices_from: markings, label: Route lines, description: Color and style of the figure-eight lines and the overpass marking., group: look}
-  wall_material: {type: choice, choices_from: walls, label: Warehouse walls, group: look}
+  floor: {type: choice, choices_from: floors, default: concrete, label: Floor, group: look}
+  marking: {type: choice, choices_from: markings, default: yellow_black, label: Route lines, description: Color and style of the figure-eight lines and the overpass marking., group: look}
+  wall_material: {type: choice, choices_from: walls, default: concrete, label: Warehouse walls, group: look}
   lane:
     type: choice
     choices: [center, edges]
+    default: center
     label: Lane marking
     description: center — a line along the middle of the route; edges — lines along the lane edges, as wide as the overpass deck.
     group: route
   overpass:
     type: choice
     choices: [wide, narrow]
+    default: wide
     label: Overpass
     description: wide — 0.7 m with railings; narrow — 0.4 m for one robot, without railings.
     group: route
   road:
     type: choice
     choices: [none, plain, concrete, painted_concrete, asphalt, carpet, wood, tiles]
+    default: none
     label: Road surface
     description: none — only the lines on the floor; or a road band of this surface along the figure eight.
     group: route
-  overpass_surface: {type: choice, choices_from: floors, label: Overpass surface, group: route}
+  overpass_surface: {type: choice, choices_from: floors, default: asphalt, label: Overpass surface, group: route}
   objects:
     type: int
     min: 0
     max: 50
+    default: 14
     label: Objects
     description: Number of boxes, crates, cones and other objects scattered around; some are low, under the lidar, and a flat board can be driven over.
     group: objects
   objects_on_route:
     type: bool
+    default: false
     label: Objects on the route
     description: Also put objects on the figure eight, as obstacles to drive around; the overpass stays free.
     group: objects
   objects_seed:
     type: string
+    default: ''
     label: Layout variant
     description: A number selects the layout of the objects; empty — a new random one every time.
     group: objects
-  layout: {internal: true}
 presets:
   empty:
     label: No objects

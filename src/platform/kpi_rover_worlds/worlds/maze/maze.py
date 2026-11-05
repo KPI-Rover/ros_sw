@@ -1,5 +1,5 @@
 """
-Maze layouts for the maze world: fixed levels and a random maze generator.
+Maze world: a warehouse with a maze of walls and arches, a fixed level or a random one.
 
 A maze is a text grid of (2 * rows + 1) lines of (2 * cols + 1) characters.
 Cells are at odd line and odd column indices, everything else is a wall
@@ -7,7 +7,7 @@ position between cells or a corner:
     '#'      - wall
     ' '      - open passage (in a wall position) or a cell
     'S', 'E' - entrance and exit, open passages in the outer wall
-    letters  - openings from arches.yaml, e.g. 'A' arch or 'L' too low arch
+    letters  - openings from ARCHES, e.g. 'A' arch or 'L' too low arch
 
 Example:
     #######
@@ -16,12 +16,9 @@ Example:
     #   L E
     #######
 
-The generator turns a maze into a layout YAML with wall boxes, arches, start
-points and the shortest route from the entrance to the exit for maze.sdf.xacro,
-and scatters objects around the maze (see scatter.py of kpi_rover_worlds). The launch file calls prepare() before
-processing the world; it can also be run directly to print or check a maze:
-    python3 generator.py --maze random --seed 7 --difficulty hard
-    python3 generator.py --maze level2 --layout /tmp/layout.yaml
+Start points: 'a' outside the entrance and 'b' outside the exit, facing into
+the maze; the shortest route between them is a blue line, GUI only. To print
+a maze: python3 maze.py --maze random --seed 7 --difficulty hard
 
 Random mazes are perfect mazes (a spanning tree of passages) with a few extra
 loops, so every cell is reachable. Passable arches replace passages on the
@@ -35,17 +32,12 @@ import argparse
 import math
 import os
 import random
-import tempfile
 from collections import deque
 
-import yaml
-
-from kpi_rover_worlds import scatter, textured_box
-from kpi_rover_worlds.world_info import CONFIG_DIR
-
+from kpi_rover_worlds import scatter, sdf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-LEVELS_DIR = os.path.join(HERE, 'config', 'levels')
+LEVELS_DIR = os.path.join(HERE, 'levels')
 
 CELL = 0.7              # cell size, m; corridors are CELL - WALL_THICKNESS wide
 WALL_THICKNESS = 0.05
@@ -66,14 +58,20 @@ DIRECTIONS = ((0, 1), (1, 0), (0, -1), (-1, 0))
 # Free space kept around the maze and on the way from start points to the maze, m.
 MAZE_MARGIN = 0.4
 START_RADIUS = 0.6
+ARCH_COLOR = (0.55, 0.42, 0.3)      # arch_material 'contrast'
 
-# How the Gazebo GUI shows maze walls, see 'solid_box' in walls.xacro.
-WALL_VIEWS = ('solid', 'transparent', 'hidden', 'marking')
-
-
-def load_arches():
-    with open(os.path.join(HERE, 'config', 'arches.yaml')) as f:
-        return yaml.safe_load(f)
+# Openings by their letter in maze grids: clear width and height (None: a
+# doorway without a lintel), m, and whether the robot (0.26 m wide, 0.345 m
+# high, lidar at 0.245 m) fits through. T fits with about 3 cm to spare; the
+# L lintel is above the lidar scan plane, so the opening looks free to the
+# lidar, but the robot hits it.
+ARCHES = {
+    'D': dict(name='door', width=0.55, height=None, passable=True),
+    'A': dict(name='arch', width=0.45, height=0.45, passable=True),
+    'T': dict(name='tight_arch', width=0.32, height=0.38, passable=True),
+    'N': dict(name='narrow_arch', width=0.20, height=0.45, passable=False),
+    'L': dict(name='low_arch', width=0.45, height=0.30, passable=False),
+}
 
 
 def available_levels():
@@ -168,7 +166,7 @@ def generate(seed, difficulty):
     if difficulty not in DIFFICULTIES:
         raise ValueError(f"Unknown difficulty '{difficulty}'. Available: {', '.join(DIFFICULTIES)}.")
     cfg = DIFFICULTIES[difficulty]
-    arches = load_arches()
+    arches = ARCHES
     rng = random.Random(f'{seed}:{difficulty}')
     cols, rows = cfg['size']
     maze = Maze([['#'] * (2 * cols + 1) for _ in range(2 * rows + 1)])
@@ -233,13 +231,13 @@ def load_level(name):
         raise ValueError(f"Unknown maze '{name}'. Available: {', '.join(available_levels())}, random.")
     with open(path) as f:
         maze = Maze.parse(f.read())
-    maze.check(load_arches())
+    maze.check(ARCHES)
     return maze
 
 
 def layout(maze):
-    """Geometry of a maze centered at the origin for maze.sdf.xacro."""
-    arches = load_arches()
+    """Geometry of a maze centered at the origin."""
+    arches = ARCHES
     t = WALL_THICKNESS
 
     def x(c):
@@ -347,69 +345,58 @@ def scatter_objects(lay, args):
     return scatter.scatter_from_args(args, (-wx, wx, -wy, wy), keep_out, [('rect', -sx, sx, -sy, sy)], 'maze')
 
 
-def wall_meshes(lay, wall_material, arch_material):
-    """Textured box meshes of the maze walls, the perimeter walls and the arch parts (see textured_box.py)."""
-    with open(os.path.join(CONFIG_DIR, 'walls.yaml')) as f:
-        walls_cfg = yaml.safe_load(f)
-    t, h = lay['wall_thickness'], lay['wall_height']
-    walls = {(max(sx, sy), min(sx, sy), h, 0.0) for _, _, sx, sy in lay['walls']}
-    walls.update(textured_box.perimeter_boxes(*lay['warehouse'], height=h))
-    meshes = textured_box.wall_meshes(sorted(walls), wall_material, walls_cfg)
-    if arch_material != 'contrast':
-        parts = set()
-        for arch in lay['arches']:
-            post = (lay['span'] - arch['width']) / 2
-            if post > 0:
-                parts.add((post, t, h, 0.0))
-            if arch['height'] > 0:
-                parts.add((arch['width'], t, h - arch['height'], arch['height']))
-        meshes.update(textured_box.wall_meshes(sorted(parts), arch_material, walls_cfg))
-    return meshes
-
-
 def make_maze(name, seed, difficulty):
     if name == 'random':
         return generate(int(seed), difficulty)
     return load_level(name)
 
 
-def prepare(args):
-    """
-    Launch hook: build the maze selected by the world arguments ('maze',
-    'seed', 'difficulty') and return the xacro mappings with 'layout' set to
-    a temporary layout file.
-    """
-    if args.get('wall_view') not in WALL_VIEWS:
-        raise ValueError(f"Unknown wall_view '{args.get('wall_view')}'. Available: {', '.join(WALL_VIEWS)}.")
-    if args.get('layout'):
-        return args
-    maze = make_maze(args['maze'], args['seed'], args['difficulty'])
-    lay = layout(maze)
-    lay['objects'] = scatter_objects(lay, args)
-    lay['meshes'] = wall_meshes(lay, args.get('wall_material', 'plain'), args.get('arch_material', 'contrast'))
-    with tempfile.NamedTemporaryFile('w', prefix='kpi_rover_maze_', suffix='.yaml', delete=False) as f:
-        yaml.safe_dump(lay, f, default_flow_style=None, sort_keys=False)
-    return dict(args, layout=f.name)
+def arch(parent, name, x, y, yaw, span, width, height, wall_height, thickness, view, material):
+    """Posts leave a 'width' opening in a 'span' long wall, a lintel above 'height' (0: none) closes it."""
+    look = dict(color=ARCH_COLOR) if material == 'contrast' else dict(wall_material=material)
+    link = sdf.static_model(parent, name, (x, y, 0, 0, 0, yaw))
+    post = (span - width) / 2
+    if post > 0:
+        for side, sign in (('left', -1), ('right', 1)):
+            sdf.solid_box(link, f'post_{side}', sign * (width + post) / 2, 0, wall_height / 2, post, thickness,
+                          wall_height, view=view, **look)
+    if height > 0:
+        sdf.solid_box(link, 'lintel', 0, 0, (height + wall_height) / 2, width, thickness, wall_height - height,
+                      view=view, footprint_scale=0.3, **look)
+
+
+def build(args):
+    lay = layout(make_maze(args['maze'], args['seed'], args['difficulty']))
+    view = args['wall_view']
+    root, world = sdf.world('maze')
+    sdf.floor(world, args['floor'], *lay['warehouse'])
+    sdf.perimeter_walls(world, *lay['warehouse'], args['wall_material'])
+    link = sdf.static_model(world, 'maze_walls')
+    for i, (x, y, sx, sy) in enumerate(lay['walls']):
+        sdf.wall(link, f'wall_{i}', x, y, 0 if sx >= sy else math.pi / 2, max(sx, sy), lay['wall_height'],
+                 min(sx, sy), args['wall_material'], view)
+    for i, a in enumerate(lay['arches']):
+        arch(world, f"{a['type']}_{i}", a['x'], a['y'], a['yaw'], lay['span'], a['width'], a['height'],
+             lay['wall_height'], lay['wall_thickness'], view, args['arch_material'])
+    if args['route']:
+        link = sdf.static_model(world, 'maze_route', (0, 0, 0.002, 0, 0, 0))    # above wall footprints
+        for i, (x1, y1, x2, y2, start, end) in enumerate(lay['route']):
+            sdf.marking_line(link, f'route_{i}', x1, y1, x2, y2, 'blue', width=0.03, start=start, end=end,
+                             visibility=sdf.VISIBLE_GUI_ONLY)
+    for i, (kind, x, y, yaw) in enumerate(scatter_objects(lay, args)):
+        sdf.scatter_object(world, f'{kind}_{i}', kind, x, y, yaw)
+    for name, (x, y, yaw) in lay['starts'].items():
+        sdf.start_point(world, name, x, y, yaw)
+    return root
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Print a maze and optionally write its layout for maze.sdf.xacro.')
+    parser = argparse.ArgumentParser(description='Print a maze.')
     parser.add_argument('--maze', default='level1', help=f"fixed level ({', '.join(available_levels())}) or 'random'")
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--difficulty', default='medium', choices=list(DIFFICULTIES))
-    parser.add_argument('--objects', type=int, default=0, help='number of objects scattered around the maze')
-    parser.add_argument('--objects-seed', default='', help='object placement seed; empty for a new random one')
-    parser.add_argument('--layout', help='write the layout YAML to this file')
     args = parser.parse_args()
-
-    maze = make_maze(args.maze, args.seed, args.difficulty)
-    print(maze.text())
-    lay = layout(maze)
-    if args.objects:
-        lay['objects'] = scatter_objects(lay, vars(args))
-    if args.layout:
-        with open(args.layout, 'w') as f:
-            yaml.safe_dump(lay, f, default_flow_style=None, sort_keys=False)
+    print(make_maze(args.maze, args.seed, args.difficulty).text())
 
 
 if __name__ == '__main__':

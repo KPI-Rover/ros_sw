@@ -1,4 +1,4 @@
-# Object library for scattered objects (see common/xacro/objects.xacro and scatter.py).
+# Object library for scattered objects (see sdf.scatter_object and scatter.py).
 #
 # kind   - 'item' or 'cone'
 # mesh   - visual mesh in assets

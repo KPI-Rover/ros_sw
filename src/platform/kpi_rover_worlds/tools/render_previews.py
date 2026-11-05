@@ -23,31 +23,22 @@ the world manifest (see world_info.py of kpi_rover_worlds):
         grass: {camera: close, values: [0, 1, 3]}
         items: {camera: close, values: [0, 20], with: {objects_seed: 1}}   # 'with': more arguments
 
-The pictures are saved as JPEG files in worlds/<world>/previews/ of the
-installed package, or in --out (world.jpg,
-start_<name>.jpg, <arg>_<value>.jpg, preset_<name>.jpg), each
-rendered with the other arguments at their defaults. Layers make the base
-pictures <base arg>_<value>.jpg without the overlay, and the overlay pictures
-<overlay arg>_<value>.png: the overlay alone with a transparent background,
-cut out by comparing it with the bare base on contrasting base values; a
-tool puts any overlay on any base, so every combination is shown. Needs
-Gazebo and xacro (a sourced ROS environment); runs a headless Gazebo server
-for each set of world arguments.
+The pictures go to worlds/<world>/previews/ or --out: world.jpg, start_<name>.jpg,
+<arg>_<value>.jpg, preset_<name>.jpg, with the other arguments at their defaults.
+Layers make <base arg>_<value>.jpg without the overlay and <overlay arg>_<value>.png,
+the overlay alone on a transparent background, so a tool can put any overlay on
+any base. Needs Gazebo; runs a headless server for each set of world arguments.
 
     ros2 run kpi_rover_worlds render_previews.py garden --out src/platform/kpi_rover_worlds/worlds/garden/previews
     ros2 run kpi_rover_worlds render_previews.py garden --only grass,start_points
 
-With --sdf it makes the map (map.jpg, map.json) of a world file the launch
-file generated, e.g. for a GUI to show where the robot can start in the world
-just started; --partition keeps its Gazebo apart from a running simulation:
-    ros2 run kpi_rover_worlds render_previews.py garden --sdf /tmp/kpi_rover_world_x.world --out /tmp/map --partition map
+With --sdf it makes the map of a generated world file, e.g. for a GUI to show
+where the robot can start; --partition keeps its Gazebo apart from a running one:
+    ros2 run kpi_rover_worlds render_previews.py garden --sdf <world file> --out /tmp/map --partition map
 
-map.json tells where the map is in the world and where the start points
-are: {center: [x, y], size, start_points: {name: [x, y, yaw]}}; the map has
-north up and east to the right. It also has the ground heights: 'heights' [[z, ...], ...], rows from
-north to south over the map square (0 where the world has no height map),
-and the top surface heights 'surface' the same way: the ground with the
-objects and structures on it, for checking where the robot can be put.
+map.jpg has north up. map.json: {center: [x, y], size, start_points: {name: [x, y, yaw]},
+heights: ground [[z]], surface: the top of the ground and everything on it [[z]]},
+rows from north to south over the map square.
 """
 
 import argparse
@@ -142,6 +133,26 @@ def collision_world(sdf):
     return ET.tostring(root, encoding='unicode')
 
 
+def run_gazebo(sdf, done, timeout):
+    """Run a headless Gazebo server on an SDF world until done() or the timeout."""
+    with tempfile.TemporaryDirectory(prefix='kpi_rover_gz_') as tmp:
+        path = os.path.join(tmp, 'world.sdf')
+        with open(path, 'w') as f:
+            f.write(sdf)
+        with open(os.path.join(tmp, 'stderr'), 'w+') as err:
+            server = subprocess.Popen(['gz', 'sim', '-s', '-r', path], stdout=subprocess.DEVNULL, stderr=err,
+                                      start_new_session=True)
+            start = time.time()
+            try:
+                while not done() and time.time() - start < timeout:
+                    if server.poll() is not None:
+                        err.seek(0)
+                        raise RuntimeError(f'Gazebo exited with {server.returncode}: {err.read()[-2000:]}')
+                    time.sleep(1)
+            finally:
+                stop(server)
+
+
 def surface_heights(sdf, center, size, timeout=120):
     """
     Heights [[z]] of the top surface over the map square, rows from north to
@@ -163,17 +174,11 @@ def surface_heights(sdf, center, size, timeout=120):
     frames = []
     node = Node()
     node.subscribe(ImageMsg, topic, lambda msg: frames.append(msg))
-    with tempfile.NamedTemporaryFile('w', prefix='kpi_rover_surface_', suffix='.sdf', delete=False) as f:
-        f.write(world)
-    server = subprocess.Popen(['gz', 'sim', '-s', '-r', f.name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                              start_new_session=True)
     start = time.time()
     try:
-        while len(frames) < DEPTH_FRAMES and time.time() - start < timeout and server.poll() is None:
-            time.sleep(0.5)
-    finally:
-        stop(server)
-        os.unlink(f.name)
+        run_gazebo(world, lambda: len(frames) >= DEPTH_FRAMES, timeout)
+    except RuntimeError as e:
+        print(f'  {e}', file=sys.stderr)
     if not frames:
         print('  no depth frames: no surface heights', file=sys.stderr)
         return None
@@ -183,7 +188,8 @@ def surface_heights(sdf, center, size, timeout=120):
     ground = np.array(ground_heights(sdf, center, size, DEPTH_PIXELS))
     top = np.maximum(top, ground)
     k = DEPTH_PIXELS // SURFACE_SAMPLES
-    top = top[:k * SURFACE_SAMPLES, :k * SURFACE_SAMPLES].reshape(SURFACE_SAMPLES, k, SURFACE_SAMPLES, k).max(axis=(1, 3))
+    n = SURFACE_SAMPLES
+    top = top[:k * n, :k * n].reshape(n, k, n, k).max(axis=(1, 3))
     print(f'  surface heights in {time.time() - start:.0f} s')
     return np.round(top, 3).tolist()
 
@@ -214,23 +220,20 @@ def render_layers(path, info, spec, out, size, quality, only):
     for value in dict.fromkeys(bases + (list(overlay.get('against', [])) if overlays else [])):
         print(f"{info['name']} {base['arg']}:={value} (without {overlay['arg']}): layer")
         sdf = remove_models(world_info.world_sdf(path, {base['arg']: str(value)}), base.get('hide', []))
-        with tempfile.TemporaryDirectory(prefix='kpi_rover_layers_') as tmp:
-            png = render(sdf, {'layer': camera}, tmp, size).get('layer')
-            if png:
-                bare[value] = np.asarray(Image.open(png).convert('RGB'), float)
-        if value in bases and value in bare:
-            Image.fromarray(bare[value].astype(np.uint8)).save(os.path.join(out, f"{base['arg']}_{value}.jpg"),
-                                                                 quality=quality, optimize=True)
+        picture = render(sdf, {'layer': camera}, size).get('layer')
+        if picture:
+            bare[value] = np.asarray(picture, float)
+            if value in bases:
+                picture.save(os.path.join(out, f"{base['arg']}_{value}.jpg"), quality=quality, optimize=True)
     for value in overlays:
         alpha, color = None, None
         for back in overlay.get('against', []):
             print(f"{info['name']} {base['arg']}:={back} {overlay['arg']}:={value}: overlay")
-            with tempfile.TemporaryDirectory(prefix='kpi_rover_layers_') as tmp:
-                png = render(world_info.world_sdf(path, {base['arg']: str(back), overlay['arg']: str(value)}),
-                             {'layer': camera}, tmp, size).get('layer')
-                picture = np.asarray(Image.open(png).convert('RGB'), float) if png else None
+            picture = render(world_info.world_sdf(path, {base['arg']: str(back), overlay['arg']: str(value)}),
+                             {'layer': camera}, size).get('layer')
             if picture is None or back not in bare:
                 continue
+            picture = np.asarray(picture, float)
             diff = np.abs(picture - bare[back]).max(axis=2)
             a = np.clip((diff - OVERLAY_DIFF) / OVERLAY_SOFT, 0, 1)
             if alpha is None:
@@ -246,10 +249,10 @@ def render_layers(path, info, spec, out, size, quality, only):
 
 def write_map(sdf, out, image, center, size, quality):
     """
-    map.jpg from a rendered PNG and map.json: where the map is, the start
+    map.jpg from a rendered image and map.json: where the map is, the start
     points, the ground heights and the surface heights (see surface_heights).
     """
-    Image.open(image).convert('RGB').save(os.path.join(out, 'map.jpg'), quality=quality, optimize=True)
+    image.save(os.path.join(out, 'map.jpg'), quality=quality, optimize=True)
     info = dict(center=list(center), size=size,
                 start_points={n: [round(x, 3), round(y, 3), round(yaw, 4)]
                               for n, (x, y, _, yaw) in world_info.start_poses(sdf).items()},
@@ -288,13 +291,17 @@ def map_camera(center, size):
     return [center[0], center[1], height, 0, 90, 90, fov, MAP_PIXELS, MAP_PIXELS]
 
 
-def render(sdf, cameras, out_dir, size, timeout=300, gui_cameras=()):
+def render(sdf, cameras, size, timeout=300, gui_cameras=()):
     """
-    Render {name: camera} in an SDF world with a headless Gazebo; return {name: PNG path}.
+    Render {name: camera} in an SDF world with a headless Gazebo; return {name: RGB image}.
     A camera is [x, y, z, roll, pitch, yaw, fov], optionally followed by its own width and height.
     Cameras in gui_cameras see what the Gazebo window shows, the others what the robot camera sees.
     """
-    frames = os.path.join(out_dir, 'frames')
+    with tempfile.TemporaryDirectory(prefix='kpi_rover_frames_') as frames:
+        return _render(sdf, cameras, size, timeout, gui_cameras, frames)
+
+
+def _render(sdf, cameras, size, timeout, gui_cameras, frames):
     sensors = ''
     for name, camera in cameras.items():
         x, y, z, roll, pitch, yaw, fov = camera[:7]
@@ -315,37 +322,26 @@ def render(sdf, cameras, out_dir, size, timeout=300, gui_cameras=()):
     model = f'<model name="preview_cameras"><static>true</static><link name="link">{sensors}</link></model>'
     sdf = sdf.replace('</world>', model + '</world>', 1)
     world = re.search(r'<world name="([^"]+)"', sdf).group(1)
-    path = os.path.join(out_dir, 'world.sdf')
-    with open(path, 'w') as f:
-        f.write(sdf)
 
-    def count(name):
-        return len(glob.glob(os.path.join(frames, name, '*.png')))
+    def files(name):
+        return sorted(glob.glob(os.path.join(frames, name, '*.png')),
+                      key=lambda f: int(re.findall(r'\d+', os.path.basename(f))[-1]))
+
+    def done():
+        # Several frames each, so all models have loaded; cameras render only while their images are subscribed.
+        waiting = [name for name in cameras if len(files(name)) < SETTLE_FRAMES]
+        for name in waiting:
+            subprocess.run(['timeout', '3', 'gz', 'topic', '-e', '-n', '1', '-t',
+                            f'/world/{world}/model/preview_cameras/link/link/sensor/preview_{name}/image'],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return not waiting
 
     start = time.time()
-    server = subprocess.Popen(['gz', 'sim', '-s', '-r', path], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-                              text=True, start_new_session=True)
-    try:
-        while time.time() - start < timeout:
-            time.sleep(1)
-            if server.poll() is not None:
-                raise RuntimeError(f'Gazebo exited with {server.returncode}: {server.stderr.read()[-2000:]}')
-            # Several frames each, so all models have loaded; cameras render only while their images are subscribed.
-            waiting = [name for name in cameras if count(name) < SETTLE_FRAMES]
-            if not waiting:
-                break
-            for name in waiting:
-                subprocess.run(['timeout', '3', 'gz', 'topic', '-e', '-n', '1', '-t',
-                                f'/world/{world}/model/preview_cameras/link/link/sensor/preview_{name}/image'],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    finally:
-        stop(server)
+    run_gazebo(sdf, done, timeout)
     result = {}
     for name in cameras:
-        files = sorted(glob.glob(os.path.join(frames, name, '*.png')),
-                       key=lambda f: int(re.findall(r'\d+', os.path.basename(f))[-1]))
-        if files:
-            result[name] = files[-1]
+        if files(name):
+            result[name] = Image.open(files(name)[-1]).convert('RGB')
         else:
             print(f'  no frames from camera {name}', file=sys.stderr)
     print(f'  rendered {len(result)} pictures in {time.time() - start:.0f} s')
@@ -375,15 +371,8 @@ def map_place(spec, sdf=None):
 
 
 def jobs(info, spec, only):
-    """
-    {args tuple: {picture file name: camera}} of what to render, grouped by
-    the world arguments; a camera of 'gui_cameras' is marked by a 'gui' key.
-    """
-    cameras = spec.get('cameras', {})
+    """{args tuple: {picture file name: camera name}} of what to render, grouped by the world arguments."""
     groups = {}
-    gui = set()
-    if spec.get('world') in (spec.get('gui_cameras') or []):
-        gui.add('world')
 
     def add(args, filename, camera):
         groups.setdefault(tuple(sorted(args.items())), {})[filename] = camera
@@ -392,26 +381,22 @@ def jobs(info, spec, only):
         return not only or key in only
 
     if spec.get('world') and wanted('world'):
-        add({}, 'world', cameras[spec['world']])
+        add({}, 'world', spec['world'])
     if spec.get('start_points') and wanted('start_points'):
         add({}, 'start_points', None)
     if spec.get('presets') and spec.get('world') and wanted('presets'):
         for preset in info.get('presets', []):
-            add(dict(preset['args']), f"preset_{preset['name']}", cameras[spec['world']])
-            if spec['world'] in (spec.get('gui_cameras') or []):
-                gui.add(f"preset_{preset['name']}")
+            add(dict(preset['args']), f"preset_{preset['name']}", spec['world'])
     for arg, example in (spec.get('args') or {}).items():
         if not wanted(arg):
             continue
         arg_spec = info['args'][arg]
-        extra = {k: str(v).lower() if isinstance(v, bool) else str(v) for k, v in (example.get('with') or {}).items()}
+        extra = {k: world_info.as_text(v) for k, v in (example.get('with') or {}).items()}
         for value in example['values']:
             text = world_info.format_value(arg_spec, world_info.parse(arg_spec, str(value)))
             default = world_info.format_value(arg_spec, arg_spec['default'])
-            add(dict(extra, **({} if text == default else {arg: text})), f'{arg}_{text}', cameras[example['camera']])
-            if example['camera'] in (spec.get('gui_cameras') or []):
-                gui.add(f'{arg}_{text}')
-    return groups, gui
+            add(dict(extra, **({} if text == default else {arg: text})), f'{arg}_{text}', example['camera'])
+    return groups
 
 
 def main():
@@ -433,11 +418,11 @@ def main():
         with open(options.sdf) as f:
             sdf = f.read()
         os.makedirs(options.out, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix='kpi_rover_map_') as tmp:
-            png = render(sdf, {'map': map_camera(*map_place(spec, sdf))}, tmp, None).get('map')
-            if not png:
-                sys.exit('The map was not rendered')
-            write_map(sdf, options.out, png, *map_place(spec, sdf), options.quality)
+        place = map_place(spec, sdf)
+        image = render(sdf, {'map': map_camera(*place)}, None).get('map')
+        if not image:
+            sys.exit('The map was not rendered')
+        write_map(sdf, options.out, image, *place, options.quality)
         print(f'Map in {options.out}')
         return
     if not path:
@@ -451,20 +436,19 @@ def main():
     size = tuple(map(int, options.size.split('x')))
     only = set(filter(None, options.only.split(',')))
 
-    groups, gui = jobs(info, spec, only)
-    for args, pictures in groups.items():
+    gui_cameras = set(spec.get('gui_cameras') or [])
+    for args, pictures in jobs(info, spec, only).items():
         args = dict(args)
         print(f"{options.world} {' '.join(f'{k}:={v}' for k, v in args.items()) or '(defaults)'}: "
               f"{', '.join(pictures)}")
         sdf = world_info.world_sdf(path, args)
-        cameras = {name: camera for name, camera in pictures.items() if camera}
+        cameras = {name: spec['cameras'][camera] for name, camera in pictures.items() if camera}
+        gui = {name for name, camera in pictures.items() if camera in gui_cameras}
         if 'start_points' in pictures:
             for name, pose in world_info.start_poses(sdf).items():
                 cameras[f'start_{name}'] = robot_camera(pose)
-        with tempfile.TemporaryDirectory(prefix='kpi_rover_previews_') as tmp:
-            for name, png in render(sdf, cameras, tmp, size, gui_cameras=gui).items():
-                Image.open(png).convert('RGB').save(os.path.join(out, name + '.jpg'), quality=options.quality,
-                                                    optimize=True)
+        for name, image in render(sdf, cameras, size, gui_cameras=gui).items():
+            image.save(os.path.join(out, name + '.jpg'), quality=options.quality, optimize=True)
     if spec.get('layers'):
         render_layers(path, info, spec, out, size, options.quality, only)
     print(f'Pictures in {out}')

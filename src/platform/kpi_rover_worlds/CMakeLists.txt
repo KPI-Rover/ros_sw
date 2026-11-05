@@ -11,9 +11,9 @@ install(DIRECTORY
   worlds
   assets
   DESTINATION share/${PROJECT_NAME}
+  PATTERN __pycache__ EXCLUDE
 )
 install(DIRECTORY
-  common/xacro
   common/config
   DESTINATION share/${PROJECT_NAME}/common
 )

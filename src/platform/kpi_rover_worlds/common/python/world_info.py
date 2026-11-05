@@ -3,8 +3,9 @@ Descriptions of the worlds and their arguments, and building their SDF, for
 the launch file and for tools such as a GUI.
 
 Every world has a directory of its own, worlds/<name>/, with the world file
-<name>.world (SDF) or <name>.world.xacro (a configurable world), and a
-manifest <name>.yaml describing the world and each of its arguments:
+<name>.world (SDF) or <name>.py, a configurable world whose build(args)
+returns the SDF root (see sdf.py) for {arg: parsed value}, and a manifest
+<name>.yaml describing the world and each of its arguments:
 
     title: Garden
     description: Apple orchard in the steppe with a field road around it.
@@ -21,10 +22,9 @@ manifest <name>.yaml describing the world and each of its arguments:
         label: Relief
         description: ...
         group: terrain
-      terrain_seed: {type: int, min: 0, label: Terrain seed}
+      terrain_seed: {type: int, min: 0, default: 11, label: Terrain seed}
       friction: {type: float, label: Friction, advanced: true}   # shown under 'more options' in a UI
       seed: {type: int, show_if: {maze: random}}   # shown only while other arguments have these values
-      layout: {internal: true}    # set by the launch file, not by users
     presets:                      # optional: ready sets of arguments
       light:
         label: Light
@@ -39,21 +39,16 @@ and of each preset, 'layers' {base, overlay} names the two arguments whose
 pictures are put one over the other (the overlay ones are transparent PNG),
 and as 'images' [{value, image}] of the arguments.
 
-Defaults come from the <xacro:arg> declarations of the world itself, so they
-are never duplicated. Every non-internal xacro argument must be in the
-manifest (check() reports the ones missing).
-
 Command line, for tools:
     python3 -m kpi_rover_worlds.world_info --json    # all worlds, their arguments and defaults
     python3 -m kpi_rover_worlds.world_info --check   # manifests match the worlds
     python3 -m kpi_rover_worlds.world_info --build garden grass:=0.5 mud:=0.25   # prints the world file
 """
 
+import hashlib
 import json
 import os
-import re
 import sys
-import tempfile
 import xml.etree.ElementTree as ET
 
 import yaml
@@ -62,7 +57,10 @@ from ament_index_python.packages import get_package_share_directory
 SHARE_DIR = get_package_share_directory('kpi_rover_worlds')
 WORLDS_DIR = os.path.join(SHARE_DIR, 'worlds')
 CONFIG_DIR = os.path.join(SHARE_DIR, 'common', 'config')
-EXTENSIONS = ('.world.xacro', '.world')
+EXTENSIONS = ('.py', '.world')
+# World files built by build(): the CACHE_KEEP most recently used are kept.
+CACHE_DIR = os.path.join(os.path.expanduser('~'), '.cache', 'kpi_rover', 'worlds')
+CACHE_KEEP = 20
 TYPES = ('bool', 'int', 'float', 'string', 'choice')
 
 
@@ -75,7 +73,7 @@ def world_name(filename):
 
 
 def world_files(worlds_dir=WORLDS_DIR):
-    """{name: path} of the worlds: <name>/<name>.world.xacro or <name>/<name>.world in the worlds folder."""
+    """{name: path} of the worlds: <name>/<name>.py or <name>/<name>.world in the worlds folder."""
     files = {}
     for name in sorted(os.listdir(worlds_dir)):
         for ext in EXTENSIONS:
@@ -86,10 +84,15 @@ def world_files(worlds_dir=WORLDS_DIR):
     return files
 
 
-def xacro_defaults(path):
-    """{name: default} of the args declared with <xacro:arg> in a xacro world, in order."""
-    with open(path) as f:
-        return dict(re.findall(r'<xacro:arg\s+name="([^"]+)"\s+default="([^"]*)"', f.read()))
+def declared_args(path):
+    """{name: default as text} of the arguments of a configurable world, in order; empty for an SDF world."""
+    return {arg: as_text(spec['default']) for arg, spec in (manifest(path).get('args') or {}).items()
+            if 'default' in (spec or {})}
+
+
+def as_text(value):
+    """A manifest value (YAML: bool, number or string) as given on the command line."""
+    return str(value).lower() if isinstance(value, bool) else str(value)
 
 
 def resolve(world, worlds_dir=WORLDS_DIR):
@@ -103,25 +106,37 @@ def resolve(world, worlds_dir=WORLDS_DIR):
                      f"(or pass a path to a world file).")
 
 
-def world_sdf(path, args):
-    """
-    SDF of a world file: an SDF file as it is, or a xacro world processed with {arg: string value},
-    after its generator (generator.py next to it), if it has one, turns all arguments into the xacro mappings.
-    """
-    if not path.endswith('.xacro'):
+_generators = {}
+
+
+def generator(path):
+    """The module of a <name>.py world, loaded once."""
+    if path not in _generators:
+        import importlib.util
+        world_dir = os.path.dirname(path)
+        spec = importlib.util.spec_from_file_location(f'kpi_rover_world_{os.path.basename(world_dir)}', path)
+        module = importlib.util.module_from_spec(spec)
+        # Its own modules (e.g. garden/terrain.py) are found next to it while it is imported.
+        sys.path.insert(0, world_dir)
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            sys.path.remove(world_dir)
+        _generators[path] = module
+    return _generators[path]
+
+
+def world_sdf(path, args, worlds_dir=WORLDS_DIR):
+    """SDF of a world file: an SDF file as it is, or a <name>.py world built for {arg: string value}."""
+    if not path.endswith('.py'):
         with open(path) as f:
             return f.read()
-    import importlib.util
-    import xacro
-    mappings = dict(xacro_defaults(path), **args)
-    generator = os.path.join(os.path.dirname(path), 'generator.py')
-    if os.path.isfile(generator):
-        sys.path.insert(0, os.path.dirname(generator))  # the generator's own modules, e.g. garden/terrain.py
-        spec = importlib.util.spec_from_file_location('world_generator', generator)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        mappings = module.prepare(mappings)
-    return xacro.process_file(path, mappings=mappings).toxml()
+    validate(path, args, worlds_dir)
+    from .sdf import to_string
+    specs = describe(path, worlds_dir)['args']
+    values = {arg: spec['default'] for arg, spec in specs.items()}
+    values.update({arg: parse(specs[arg], value) for arg, value in args.items()})
+    return to_string(generator(path).build(values))
 
 
 def parse_args(text):
@@ -137,18 +152,37 @@ def parse_args(text):
 
 def build(world, args, worlds_dir=WORLDS_DIR):
     """
-    Path of an SDF file for Gazebo of a world given by name or path: an SDF file as it is, or a xacro
-    world built with {arg: string value}, checked against its manifest, into a temporary file.
+    Path of an SDF file for Gazebo of a world given by name or path: an SDF file as it is, or a configurable
+    world built with {arg: string value}, checked against its manifest, into CACHE_DIR/<name>_<hash>.world.
     """
     path = resolve(world, worlds_dir)
-    if not path.endswith('.xacro'):
+    if not path.endswith('.py'):
         if args:
-            raise ValueError(f"{os.path.basename(path)} is not a .world.xacro world, it takes no arguments.")
+            raise ValueError(f"{os.path.basename(path)} is not a configurable world, it takes no arguments.")
         return path
-    validate(path, args, worlds_dir)
-    with tempfile.NamedTemporaryFile('w', prefix='kpi_rover_world_', suffix='.world', delete=False) as f:
-        f.write(world_sdf(path, args))
-    return f.name
+    sdf = world_sdf(path, args, worlds_dir)
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    digest = hashlib.sha1(sdf.encode()).hexdigest()[:12]
+    file = os.path.join(CACHE_DIR, f'{world_name(os.path.basename(path))}_{digest}.world')
+    if not os.path.isfile(file):
+        tmp = f'{file}.{os.getpid()}.tmp'   # several launches may build the same world at once
+        with open(tmp, 'w') as f:
+            f.write(sdf)
+        os.replace(tmp, file)
+    os.utime(file)      # marks it as recently used
+    clean_cache()
+    return file
+
+
+def clean_cache(keep=CACHE_KEEP):
+    """Remove the least recently used world files from CACHE_DIR, keeping 'keep' of them."""
+    files = [os.path.join(CACHE_DIR, f) for f in os.listdir(CACHE_DIR) if f.endswith('.world')]
+    files.sort(key=os.path.getmtime)
+    for file in files[:-keep]:
+        try:
+            os.remove(file)
+        except FileNotFoundError:
+            pass        # removed by another launch
 
 
 def start_poses(sdf):
@@ -192,7 +226,7 @@ def describe(path, worlds_dir=WORLDS_DIR):
     Description of a world file: {name, file, title, description, image, start_points: [{name, label, image}],
     groups, presets: [{name, label, description, args}],
     args: {name: {type, default, label, description, group, advanced, choices, min, max, images, ...}}}.
-    Only args users set are listed (not internal ones). Images are paths of existing pictures or absent.
+    Images are paths of existing pictures or absent.
     """
     m = manifest(path)
     name = world_name(os.path.basename(path))
@@ -219,13 +253,11 @@ def describe(path, worlds_dir=WORLDS_DIR):
         preset['image'] = picture('preset_' + preset['name'])
     if layers:
         info['layers'] = dict(base=layers['base']['arg'], overlay=layers['overlay']['arg'])
-    if not path.endswith('.xacro'):
+    if not path.endswith('.py'):
         return info
     specs = m.get('args', {})
-    for arg, default in xacro_defaults(path).items():
+    for arg, default in declared_args(path).items():
         spec = dict(specs.get(arg) or {})
-        if spec.get('internal'):
-            continue
         if 'choices_from' in spec:
             spec['choices'] = options(spec.pop('choices_from'), worlds_dir)
         spec.setdefault('type', 'choice' if 'choices' in spec else 'string')
@@ -255,7 +287,7 @@ def format_value(spec, value):
 def preset_list(m):
     """[{name, label, description, args: {name: string value}}] of the presets of a manifest."""
     return [dict(name=str(n), label=p.get('label', str(n)), description=p.get('description', ''),
-                 args={k: str(v).lower() if isinstance(v, bool) else str(v) for k, v in (p.get('args') or {}).items()})
+                 args={k: as_text(v) for k, v in (p.get('args') or {}).items()})
             for n, p in (m.get('presets') or {}).items()]
 
 
@@ -296,16 +328,15 @@ def parse(spec, value):
 def validate(path, values, worlds_dir=WORLDS_DIR):
     """Check {arg: string value} for a world; raise ValueError naming the argument at the first problem."""
     info = describe(path, worlds_dir)
-    declared = xacro_defaults(path)
+    declared = declared_args(path)
     for arg, value in values.items():
         if arg not in declared:
             raise ValueError(f"Unknown world argument '{arg}'. Arguments of {os.path.basename(path)}: "
                              f"{', '.join(info['args'])}.")
-        if arg in info['args']:
-            try:
-                parse(info['args'][arg], value)
-            except ValueError as e:
-                raise ValueError(f"World argument '{arg}': {e}.") from e
+        try:
+            parse(info['args'][arg], value)
+        except ValueError as e:
+            raise ValueError(f"World argument '{arg}': {e}.") from e
 
 
 def promised_previews(m, info):
@@ -329,8 +360,7 @@ def promised_previews(m, info):
 
 def check(worlds_dir=WORLDS_DIR):
     """
-    Problems of the worlds: pictures the manifest asks for are missing; xacro args without a spec,
-    specs of args the world doesn't have, bad specs.
+    Problems of the worlds: pictures the manifest asks for are missing; arguments without a default, bad specs.
     """
     problems = []
     for name, path in world_files(worlds_dir).items():
@@ -342,20 +372,16 @@ def check(worlds_dir=WORLDS_DIR):
                     problems.append(f'{name}: no picture previews/{picture}.jpg (render_previews.py {name})')
         except ValueError:
             pass  # bad example values are reported below
-        if not path.endswith('.xacro'):
+        if not path.endswith('.py'):
             continue
         if not m:
             problems.append(f'{name}: no manifest {name}.yaml')
             continue
-        declared = xacro_defaults(path)
-        specs = m.get('args', {})
-        for arg in declared:
-            if arg not in specs:
-                problems.append(f'{name}: argument {arg} is not in the manifest')
-        for arg, spec in specs.items():
+        declared = declared_args(path)
+        for arg, spec in m.get('args', {}).items():
             if arg not in declared:
-                problems.append(f'{name}: manifest argument {arg} is not declared in the world')
-            elif not (spec or {}).get('internal'):
+                problems.append(f'{name}: argument {arg} has no default')
+            else:
                 kind = spec.get('type', 'choice' if 'choices' in spec or 'choices_from' in spec else 'string')
                 if kind not in TYPES:
                     problems.append(f'{name}: argument {arg} has an unknown type {kind}')

@@ -1,32 +1,31 @@
 """
 Garden terrain: a height map with natural relief, covered with grounds and
-grass tufts.
+grass.
 
 Two reliefs are available:
-    steppe - a real place (see config/relief/): the overall
+    steppe - a real place (see relief/): the overall
              slope and broad undulations come from real heights, smoothed;
              the small unevenness of the ground and a few shallow pits are
              added in real sizes. Almost flat, like the real steppe.
     hills  - made-up hilly relief: broad hills and hollows with bumps on them.
-All real sizes are scaled down to the robot, see params.yaml. World axes are
+All real sizes are scaled down to the robot by SCALE (trees.py). World axes are
 x east and y north. The noise is defined in world coordinates, so the same
 seed always gives the same terrain, whatever the grid.
 
 Grounds: grass covers the garden, with natural patches of loose soil and of
 mud, which gathers in hollows. A field road goes around the garden: two worn
 wheel tracks of dirt and gravel with ruts pressed into them and low berms
-beside them, grass between and along them, as a real two-track road is. Each ground has its own small relief: grass
-tussocks, soil clods, smooth sunken mud. Ground boundaries are smooth curves:
-the terrain triangles are cut exactly along them. Grass (config/plants.yaml)
+beside them, grass between and along them. Each ground has its own small
+relief: grass tussocks, soil clods, smooth sunken mud. Ground boundaries are smooth curves:
+the terrain triangles are cut exactly along them. Grass (CARDS)
 grows on the grass ground and thickest along the patch edges, softening them:
-mostly light cards, pictures of tufts on crossed rectangles, and some 3D tufts.
+cards, pictures of tufts on crossed rectangles.
 
 The terrain is written as:
     heightmap_<key>.png - 16-bit height map for the Gazebo <heightmap> collision;
                           black is the lowest point, white the highest
     ground_<name>_<key>.gltf - visual mesh of each ground on the same heights,
                           with UVs repeating its macro texture (textures.py)
-    tufts_<asset>_<key>.gltf - 3D grass tufts of a Poly Haven model, merged
     grass_cards_<key>.gltf - all grass cards
     surroundings<i>_<key>.gltf - visual-only rings around the terrain up to the horizon
     terrain.yaml        - size, height range, file names for the world
@@ -34,14 +33,17 @@ The key is a hash of the parameters, unique for each terrain, as Gazebo caches
 meshes and images by file name.
 """
 
+import dataclasses
 import hashlib
 import math
 import os
 import shutil
+from typing import NamedTuple
 
 import numpy as np
 import yaml
 from PIL import Image
+from scipy import ndimage
 
 import textures
 import trees
@@ -49,18 +51,22 @@ from kpi_rover_worlds import gltf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(HERE, '..', '..', 'assets')
+SCALE = trees.SCALE
 
-
-def _load(name):
-    with open(os.path.join(HERE, 'config', name)) as f:
-        return yaml.safe_load(f)
-
-
-PARAMS = _load('params.yaml')
-GROUNDS = _load('grounds.yaml')
-PLANTS = _load('plants.yaml')
-TUFTS, CARDS = PLANTS['tufts'], PLANTS['cards']
-SCALE = PARAMS['robot_height'] * PARAMS['tree_height_robots'] / PARAMS['real_tree_height']
+# Garden grounds: texture in assets/textures, color multiplied with it, real
+# size one texture repeat covers (m), friction for rubber wheels. The height
+# map has the grass friction (soil too); mud and the wheel tracks have their
+# own collision meshes.
+GROUNDS = {
+    'grass': {'texture': 'ground_meadow', 'color': [0.82, 0.95, 0.62], 'tile': 2.51, 'mu': 0.65},
+    'soil': {'texture': 'ground_loose_soil', 'tile': 2.0, 'mu': 0.7},
+    'mud': {'texture': 'ground_forest_mud', 'tile': 2.35, 'mu': 0.3},
+    'track': {'texture': 'road_gravel', 'color': [0.6, 0.57, 0.52], 'tile': 3.0, 'mu': 0.85},
+}
+# Grass card pictures: an atlas and the places of the sprites in it, real m.
+CARDS_ATLAS = 'models/grass_cards/grass_cards.png'
+with open(os.path.join(ASSETS_DIR, 'models', 'grass_cards', 'grass_cards.yaml')) as f:
+    CARDS = yaml.safe_load(f)
 
 SIZE = 20.48        # terrain side, m
 SAMPLES = 1025      # height map samples per side (2^n + 1, as Gazebo needs): a 2 cm grid
@@ -103,24 +109,17 @@ MUD_SHARE, MUD_SIZE = 0.12, 6.0
 MUD_IN_HOLLOWS = 0.6            # how much mud prefers low places (0..1)
 EDGE = 0.3
 PATCH_FADE = 2.0               # world m at the terrain border over which the patches fade out
-# Grass tufts per real m^2: on grass, and along the ground edges (both sides,
-# within TUFTS_EDGE_BAND). They are cards: pictures of tufts on 2 crossed
-# rectangles, 4 triangles each. 3D tufts of separate blades (Poly Haven
-# models) can be added too, but cost much more than they add among the cards.
+# Grass cards per real m^2: on grass, and along the ground edges (both sides,
+# within CARDS_EDGE_BAND).
 CARDS_DENSITY = 10.0
 CARDS_EDGE_DENSITY = 14.0
 # How often each kind of plant picture is picked (by the start of its name, see
-# config/plants.yaml): meadow grass mostly, some of it dry, a few weeds.
+# CARDS): meadow grass mostly, some of it dry, a few weeds.
 CARD_WEIGHTS = (('grass_medium_01_dry', 0.15), ('grass_medium_01', 1.0), ('grass_medium_02', 0.6),
                 ('grass_bermuda_01', 0.5), ('weed_plant_02', 0.15), ('dandelion_01', 0.1))
 CARDS_PLANES = 2                # crossed rectangles per card
-TUFTS_DENSITY = 0.0             # 3D tufts are off: they cost much more than they add among the cards
-TUFTS_EDGE_DENSITY = 0.0
-TUFTS_BLADES = 0.6
-# The grass_medium_01 tufts are the heaviest and hardly show among the cards.
-TUFTS_SKIP = ('grass_medium_01',)
-TUFTS_EDGE_BAND = 0.5
-TUFTS_SIZE = (0.9, 1.6)         # random scale of the tufts and cards
+CARDS_EDGE_BAND = 0.5
+CARDS_SIZE = (0.9, 1.6)         # random scale
 
 # --- hills: made-up relief, world sizes ---
 HILLS_LAYERS = ((14.0, 0.5), (6.0, 0.18), (2.5, 0.04))
@@ -173,45 +172,30 @@ OWN_COLLISION = ('mud', 'track')
 GARDEN_GROUNDS = ('grass', 'soil', 'mud', 'track')
 
 
-# Settings changed by the world arguments (see configure()); part of the cache key.
-OPTIONS = {}
-# The module settings before any configure(), which always starts from them.
-_DEFAULTS = None
-
-
-def configure(grass=1.0, soil=None, mud=None, pits=True, puddles=True, tree_rows=None,
-              grass_friction=None, mud_friction=None, track_friction=None):
+@dataclasses.dataclass(frozen=True)
+class Options:
     """
-    Change the module settings by the garden world arguments: grass density
-    (a multiplier), soil and mud shares of the garden, pits and road puddles
-    on or off, the number of tree rows and the friction of the grounds.
+    Terrain settings set by the garden world arguments (see garden.yaml); part
+    of the cache key. The defaults are the module settings above.
     """
-    global CARDS_DENSITY, CARDS_EDGE_DENSITY, SOIL_SHARE, MUD_SHARE, GARDEN_PITS, ROAD_PUDDLES, GROUNDS, _DEFAULTS
-    # Start from the defaults, so configuring again (e.g. for another variant in the same process) doesn't stack.
-    if _DEFAULTS is None:
-        _DEFAULTS = (CARDS_DENSITY, CARDS_EDGE_DENSITY, SOIL_SHARE, MUD_SHARE, GARDEN_PITS, ROAD_PUDDLES,
-                     dict(GROUNDS), trees.ROWS)
-    (CARDS_DENSITY, CARDS_EDGE_DENSITY, SOIL_SHARE, MUD_SHARE, GARDEN_PITS, ROAD_PUDDLES,
-     GROUNDS, trees.ROWS) = _DEFAULTS[:6] + (dict(_DEFAULTS[6]), _DEFAULTS[7])
-    OPTIONS.clear()
-    CARDS_DENSITY *= grass
-    CARDS_EDGE_DENSITY *= grass
-    if soil is not None:
-        SOIL_SHARE = soil
-    if mud is not None:
-        MUD_SHARE = mud
-    if not pits:
-        GARDEN_PITS = ()
-    if not puddles:
-        ROAD_PUDDLES = ()
-    if tree_rows is not None:
-        trees.ROWS = tree_rows
-    for ground, mu in (('grass', grass_friction), ('soil', grass_friction), ('mud', mud_friction),
-                       ('track', track_friction)):
-        if mu is not None:
-            GROUNDS[ground] = dict(GROUNDS[ground], mu=mu)
-    OPTIONS.update(grass=grass, soil=SOIL_SHARE, mud=MUD_SHARE, pits=bool(pits), puddles=bool(puddles),
-                   tree_rows=trees.ROWS)
+    grass: float = 1.0                  # grass density, a multiplier of CARDS_DENSITY and CARDS_EDGE_DENSITY
+    soil: float = SOIL_SHARE            # soil and mud shares of the garden
+    mud: float = MUD_SHARE
+    pits: bool = True                   # garden pits (GARDEN_PITS) and road puddles (ROAD_PUDDLES)
+    puddles: bool = True
+    tree_rows: int = trees.ROWS
+    grass_friction: float | None = None    # friction of grass and soil, mud and the wheel tracks; None: GROUNDS
+    mud_friction: float | None = None
+    track_friction: float | None = None
+
+    def grounds(self):
+        """GROUNDS with the friction of these options."""
+        grounds = dict(GROUNDS)
+        for ground, mu in (('grass', self.grass_friction), ('soil', self.grass_friction),
+                           ('mud', self.mud_friction), ('track', self.track_friction)):
+            if mu is not None:
+                grounds[ground] = dict(grounds[ground], mu=mu)
+        return grounds
 
 
 def _hash(ix, iy, seed):
@@ -231,8 +215,20 @@ def perlin(x, y, seed):
     fy = y - y0
     ix = x0.astype(np.int64)
     iy = y0.astype(np.int64)
+    # Dense points: the gradients of their lattice are computed once and looked up.
+    x_lo, y_lo = (ix.min(), iy.min()) if ix.size else (0, 0)
+    width, height = (ix.max() - x_lo + 2, iy.max() - y_lo + 2) if ix.size else (0, 0)
+    table = width * height <= ix.size
+    if table:
+        gy, gx = np.mgrid[y_lo:y_lo + height, x_lo:x_lo + width]
+        angle = (_hash(gx, gy, seed) * (2 * math.pi / 2 ** 32)).ravel()
+        cos, sin = np.cos(angle), np.sin(angle)
+        k = (iy - y_lo) * width + (ix - x_lo)
 
     def grad(dx, dy):
+        if table:
+            i = k + dy * width + dx
+            return cos[i] * (fx - dx) + sin[i] * (fy - dy)
         angle = _hash(ix + dx, iy + dy, seed) * (2 * math.pi / 2 ** 32)
         return np.cos(angle) * (fx - dx) + np.sin(angle) * (fy - dy)
 
@@ -261,37 +257,48 @@ def smoothstep(t):
     return t * t * (3 - 2 * t)
 
 
-def _gaussian(a, sigma):
-    """Separable Gaussian blur with edge padding; sigma in samples."""
-    r = int(3 * sigma) + 1
-    k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
-    k /= k.sum()
-    a = np.pad(a, r, mode='edge')
-    a = np.apply_along_axis(lambda v: np.convolve(v, k, mode='valid'), 0, a)
-    return np.apply_along_axis(lambda v: np.convolve(v, k, mode='valid'), 1, a)
+def window(x, y, cx, cy, r):
+    """Grid slices around a circle; rows go along -y."""
+    c0, c1 = np.searchsorted(x[0], [cx - r, cx + r])
+    r0, r1 = np.searchsorted(-y[:, 0], [-(cy + r), -(cy - r)])
+    return slice(r0, r1), slice(c0, c1)
+
+
+class Hole(NamedTuple):
+    """A garden pit or a road puddle: an ellipse of radius r along 'angle' and 'width' across, real m."""
+    x: float
+    y: float
+    r: float
+    depth: float
+    water: bool
+    angle: float
+    width: float
+
+
+def bilinear(a, col, row):
+    """Grid a at fractional (col, row), row 0 at the top; clipped to the grid."""
+    rows, cols = a.shape
+    col, row = np.clip(col, 0, cols - 1), np.clip(row, 0, rows - 1)
+    c0, r0 = np.minimum(col.astype(int), cols - 2), np.minimum(row.astype(int), rows - 2)
+    fc, fr = col - c0, row - r0
+    return ((a[r0, c0] * (1 - fc) + a[r0, c0 + 1] * fc) * (1 - fr) +
+            (a[r0 + 1, c0] * (1 - fc) + a[r0 + 1, c0 + 1] * fc) * fr)
 
 
 class RealHeights:
     """Smoothed real heights from relief/<name>.png, sampled at real east/north offsets from the place."""
 
     def __init__(self, name):
-        with open(os.path.join(HERE, 'config', 'relief', name + '.yaml')) as f:
+        with open(os.path.join(HERE, 'relief', name + '.yaml')) as f:
             self.info = yaml.safe_load(f)
-        data = np.asarray(Image.open(os.path.join(HERE, 'config', 'relief', name + '.png'))).astype(float) / 65535
+        data = np.asarray(Image.open(os.path.join(HERE, 'relief', name + '.png'))).astype(float) / 65535
         h = self.info['h_min'] + data * (self.info['h_max'] - self.info['h_min'])
-        self.h = _gaussian(h, STEPPE_SMOOTH / self.info['step'])
+        self.h = ndimage.gaussian_filter(h, STEPPE_SMOOTH / self.info['step'], mode='nearest', truncate=3)
         self.h0 = self.sample(np.zeros(1), np.zeros(1))[0]
 
     def sample(self, east, north):
         step, half = self.info['step'], self.info['size'] / 2
-        n = self.h.shape[0]
-        px = np.clip((east + half) / step, 0, n - 1.001)
-        py = np.clip((half - north) / step, 0, n - 1.001)
-        x0, y0 = px.astype(int), py.astype(int)
-        fx, fy = px - x0, py - y0
-        h = self.h
-        return (h[y0, x0] * (1 - fx) * (1 - fy) + h[y0, x0 + 1] * fx * (1 - fy)
-                + h[y0 + 1, x0] * (1 - fx) * fy + h[y0 + 1, x0 + 1] * fx * fy)
+        return bilinear(self.h, (east + half) / step, (half - north) / step)
 
 
 def real(layers):
@@ -302,20 +309,21 @@ def real(layers):
 class Terrain:
     """Relief and grounds of the terrain for a relief name and seed; all functions take world points."""
 
-    def __init__(self, relief, seed):
+    def __init__(self, relief, seed, options=Options()):
         if relief not in RELIEFS:
             raise ValueError(f"Unknown relief '{relief}'. Available: {', '.join(RELIEFS)}.")
         self.relief = relief
         self.seed = seed
-        self.pits, self.puddles = [], []
+        self.options = options
         if relief == 'steppe':
             self.real = RealHeights('steppe')
         # Patch thresholds give the wanted shares of the garden inside the road.
         x, y = grid(SIZE, SIZE / 256)
         inside = (self.road(x, y) < -(GAUGE / 2 + TRACK_HALF + ROAD_CLEAR + 0.5))
         # A share of 0 puts the threshold above all noise values: no patches.
-        self.soil_cut = np.quantile(self._soil_noise(x, y)[inside], 1 - SOIL_SHARE) if SOIL_SHARE > 0 else 10.0
-        self.mud_cut = np.quantile(self._mud_noise(x, y)[inside], 1 - MUD_SHARE) if MUD_SHARE > 0 else 10.0
+        soil, mud = options.soil, options.mud
+        self.soil_cut = np.quantile(self._soil_noise(x, y)[inside], 1 - soil) if soil > 0 else 10.0
+        self.mud_cut = np.quantile(self._mud_noise(x, y)[inside], 1 - mud) if mud > 0 else 10.0
         self.place_features()
 
     def broad(self, x, y):
@@ -397,64 +405,59 @@ class Terrain:
         return smoothstep((GAUGE / 2 + TRACK_HALF + ROAD_CLEAR - np.abs(s)) / 0.5)
 
     def road_point(self, side, along, track):
-        """World point on a wheel track (track: +1 outer, -1 inner, 0 the road middle) of a road side, 'along' it from -1 to 1."""
+        """World point on a road side, 'along' it from -1 to 1, on a track: +1 outer, -1 inner, 0 the middle."""
         hx, hy = ROAD_HALF
         sx, sy = {'south': (0, -1), 'north': (0, 1), 'east': (1, 0), 'west': (-1, 0)}[side]
-        target = track * GAUGE / 2
+        across = np.linspace(-1.0, 1.0, 801)
         if sx == 0:
-            x = along * (hx - ROAD_CORNER)
-            ys = np.linspace(sy * (hy - 1.0), sy * (hy + 1.0), 801)
-            s = self.road(np.full_like(ys, x), ys)
-            return x, float(ys[np.argmin(np.abs(s - target))])
-        y = along * (hy - ROAD_CORNER)
-        xs = np.linspace(sx * (hx - 1.0), sx * (hx + 1.0), 801)
-        s = self.road(xs, np.full_like(xs, y))
-        return float(xs[np.argmin(np.abs(s - target))]), y
+            xs, ys = np.full_like(across, along * (hx - ROAD_CORNER)), sy * hy + across
+        else:
+            xs, ys = sx * hx + across, np.full_like(across, along * (hy - ROAD_CORNER))
+        i = np.argmin(np.abs(self.road(xs, ys) - track * GAUGE / 2))
+        return float(xs[i]), float(ys[i])
 
     def place_features(self):
         """Places of the garden pits, road puddles and start points (world m)."""
-        spacing = PARAMS['row_spacing'] * SCALE
+        spacing = trees.ROW_SPACING * SCALE
         rng = np.random.default_rng(self.seed * 7 + 11)
         # Pits on the lines between the tree rows, away from the start points and each other.
-        lines = (np.arange(trees.ROWS - 1) - (trees.ROWS - 2) / 2) * spacing if trees.ROWS > 1 else np.zeros(1)
+        rows = self.options.tree_rows
+        lines = (np.arange(rows - 1) - (rows - 2) / 2) * spacing if rows > 1 else np.zeros(1)
         starts = [(x, y * spacing) for _, (x, y, *_) in START_POINTS if not isinstance(x, str)]
         self.pits = []
-        for i, (r, depth, water) in enumerate(GARDEN_PITS):
+        for r, depth, water in GARDEN_PITS if self.options.pits else ():
             for _ in range(100):
                 py = lines[rng.integers(len(lines))]
                 px = rng.uniform(-trees.GARDEN_HALF_X + 1.5, trees.GARDEN_HALF_X - 1.5)
-                taken = [(sx, sy) for sx, sy in starts] + [(qx, qy) for qx, qy, *_ in self.pits]
+                taken = starts + [(p.x, p.y) for p in self.pits]
                 if all(math.hypot(px - qx, py - qy) > 1.6 for qx, qy in taken):
                     break
-            self.pits.append((px, py, r, depth, water, 0.0, r))
+            self.pits.append(Hole(px, py, r, depth, water, 0.0, r))
         self.puddles = []
-        for side, along, track, r, depth in ROAD_PUDDLES:
+        for side, along, track, r, depth in ROAD_PUDDLES if self.options.puddles else ():
             px, py = self.road_point(side, along, track)
             angle = 0.0 if side in ('south', 'north') else math.pi / 2
-            self.puddles.append((px, py, r, depth, True, angle, PUDDLE_WIDTH))
+            self.puddles.append(Hole(px, py, r, depth, True, angle, PUDDLE_WIDTH))
 
     def feature_heights(self, x, y):
         """Height change of the garden pits and road puddles at grid points, m."""
         dz = np.zeros(np.shape(x))
-        for feature in self.pits + self.puddles:
-            px, py, r, depth = feature[:4]
-            r, depth = r * SCALE, depth * SCALE
-            c0, c1 = np.searchsorted(x[0], [px - r, px + r])
-            r0, r1 = np.searchsorted(-y[:, 0], [-(py + r), -(py - r)])
-            wx, wy = x[r0:r1, c0:c1], y[r0:r1, c0:c1]
+        for hole in self.pits + self.puddles:
+            w = window(x, y, hole.x, hole.y, hole.r * SCALE)
+            wx, wy = x[w], y[w]
             # Irregular edges: the distance wobbles around the pit.
-            wobble = 1 + 0.18 * perlin(wx / (0.3 * SCALE) + px, wy / (0.3 * SCALE) + py, self.seed * 31 + 700)
-            t = np.clip(feature_distance(feature, wx, wy) * wobble, 0, 1)
+            wobble = 1 + 0.18 * perlin(wx / (0.3 * SCALE) + hole.x, wy / (0.3 * SCALE) + hole.y, self.seed * 31 + 700)
+            t = np.clip(hole_distance(hole, wx, wy) * wobble, 0, 1)
             # A bowl with steeper sides and a flatter bottom than a plain bump.
-            dz[r0:r1, c0:c1] -= depth * (1 - t ** 2.5) ** 1.5
+            dz[w] -= hole.depth * SCALE * (1 - t ** 2.5) ** 1.5
         return dz
 
     def _pit_field(self, x, y, water):
         """Positive around the garden pits with or without water: their ground, in real m."""
         f = np.full(np.shape(x), -10.0)
-        for px, py, r, depth, wet, *_ in self.pits:
-            if wet == water:
-                f = np.maximum(f, 1.25 * r - np.hypot(x - px, y - py) / SCALE)
+        for p in self.pits:
+            if p.water == water:
+                f = np.maximum(f, 1.25 * p.r - np.hypot(x - p.x, y - p.y) / SCALE)
         return f
 
     def soil(self, x, y, s=None):
@@ -485,7 +488,8 @@ class Terrain:
         """Height change of the road: ruts in the wheel tracks and low berms beside them, m."""
         d = self._track_distance(self.road(x, y))
         lo, hi = RUT_DEPTH
-        depth = lo + (hi - lo) * smoothstep(0.5 + perlin(x / (8 * SCALE) + 1.5, y / (8 * SCALE) + 2.5, self.seed * 31 + 620))
+        wave = perlin(x / (8 * SCALE) + 1.5, y / (8 * SCALE) + 2.5, self.seed * 31 + 620)
+        depth = lo + (hi - lo) * smoothstep(0.5 + wave)
         t = np.clip(d / RUT_HALF, 0, 1)
         rut = -depth * (1 - t * t) ** 2
         berm = BERM * np.exp(-((d - RUT_HALF - 0.08) / 0.08) ** 2)
@@ -504,7 +508,7 @@ class Terrain:
         clods = noise_layers(x, y, real(CLODS), self.seed * 3 + 3)
         z = z + w_soil * (np.abs(clods) * 1.5 + SOIL_RAISE * SCALE)
         z = z - w_mud * MUD_SINK * SCALE
-        return z + pits(x, y, self.seed) + self.feature_heights(x, y)
+        return z + shallow_pits(x, y, self.seed) + self.feature_heights(x, y)
 
 
 def labels(fields):
@@ -515,7 +519,7 @@ def labels(fields):
     return g
 
 
-def pits(x, y, seed):
+def shallow_pits(x, y, seed):
     """Height changes of shallow pits at world grid points (inside the terrain only), m."""
     rng = np.random.default_rng(seed * 7 + 3)
     half = SIZE / 2 - 0.5
@@ -528,12 +532,9 @@ def pits(x, y, seed):
     for cx, cy in zip(px[keep], py[keep]):
         r = rng.uniform(*PITS_RADIUS) * SCALE
         depth = rng.uniform(*PITS_DEPTH) * SCALE
-        # Grid window around the pit; rows go along -y.
-        c0, c1 = np.searchsorted(x[0], [cx - r, cx + r])
-        r0, r1 = np.searchsorted(-y[:, 0], [-(cy + r), -(cy - r)])
-        wx, wy = x[r0:r1, c0:c1], y[r0:r1, c0:c1]
-        t = np.clip(np.hypot(wx - cx, wy - cy) / r, 0, 1)
-        dz[r0:r1, c0:c1] -= depth * (1 - t * t) ** 2
+        w = window(x, y, cx, cy, r)
+        t = np.clip(np.hypot(x[w] - cx, y[w] - cy) / r, 0, 1)
+        dz[w] -= depth * (1 - t * t) ** 2
     return dz
 
 
@@ -630,58 +631,52 @@ def ground_meshes(x, y, z, normals, fields):
     return out
 
 
-def feature_distance(feature, x, y):
-    """Distance from a pit or puddle middle in its radii: 1 at its edge (an ellipse along its angle)."""
-    px, py, r, _, _, angle, width = feature
-    dx, dy = x - px, y - py
-    along = dx * math.cos(angle) + dy * math.sin(angle)
-    across = -dx * math.sin(angle) + dy * math.cos(angle)
-    return np.hypot(along / (r * SCALE), across / (width * SCALE))
+def hole_distance(hole, x, y):
+    """Distance from a hole middle in its radii: 1 at its edge."""
+    dx, dy = x - hole.x, y - hole.y
+    along = dx * math.cos(hole.angle) + dy * math.sin(hole.angle)
+    across = -dx * math.sin(hole.angle) + dy * math.cos(hole.angle)
+    return np.hypot(along / (hole.r * SCALE), across / (hole.width * SCALE))
 
 
-def write_water(path, x, y, z, puddles):
+def write_water(path, x, y, z, holes):
     """
-    Water of the pits and puddles in one glTF: for each, the terrain cells
-    below its water level, cut exactly along the shore and flattened to the
-    level. Returns the water levels.
+    Water of the holes in one glTF: for each, the terrain cells below its
+    water level, cut exactly along the shore and flattened to the level.
+    Returns the path, or '' without water.
     """
-    parts, levels = [], []
-    for feature in puddles:
-        px, py, r, depth = feature[:4]
-        r, depth = r * SCALE, depth * SCALE
-        c0, c1 = np.searchsorted(x[0], [px - r, px + r])
-        r0, r1 = np.searchsorted(-y[:, 0], [-(py + r), -(py - r)])
-        wx, wy, wz = x[r0:r1, c0:c1], y[r0:r1, c0:c1], z[r0:r1, c0:c1]
-        level = float(wz.min() + WATER_LEVEL * depth)
-        levels.append(level)
+    parts = []
+    for hole in holes:
+        w = window(x, y, hole.x, hole.y, hole.r * SCALE)
+        wx, wy, wz = x[w], y[w], z[w]
+        level = float(wz.min() + WATER_LEVEL * hole.depth * SCALE)
         # Under water: below the level and inside the pit (ruts nearby may be lower too).
-        field = np.minimum(level - wz, (0.95 - feature_distance(feature, wx, wy)) * 0.1)
+        field = np.minimum(level - wz, (0.95 - hole_distance(hole, wx, wy)) * 0.1)
         tris = grid_triangles(*wz.shape)
         attrs = np.stack([wx, wy, field], -1).reshape(-1, 3)[tris]
         wet, _ = clip(attrs, attrs[..., 2])
         if len(wet):
             parts.append(np.concatenate([wet[..., :2], np.full(wet.shape[:2] + (1,), level)], -1))
     if not parts:
-        return levels
+        return ''
     tris = np.concatenate(parts)
     p = tris.reshape(-1, 3)
     # The water material is set in the world (glTF colors without a texture are not used by Gazebo).
     gltf.write(path, p, np.tile([0.0, 0.0, 1.0], (len(p), 1)), p[:, :2] / 0.5, np.arange(len(p)).reshape(-1, 3))
-    return levels
+    return path
 
 
 def start_points(terrain, z_at):
     """Start points: [{name, x, y, z, yaw}] (world m, rad)."""
-    spacing = PARAMS['row_spacing'] * SCALE
+    spacing = trees.ROW_SPACING * SCALE
     points = []
     for name, place in START_POINTS:
         if isinstance(place[0], str):
             x, y = terrain.road_point(*place)
             # Counterclockwise along the road: the road offset grows outward, the heading is across it.
             e = 0.01
-            gx = (terrain.road(np.array(x + e), np.array(y)) - terrain.road(np.array(x - e), np.array(y))) / (2 * e)
-            gy = (terrain.road(np.array(x), np.array(y + e)) - terrain.road(np.array(x), np.array(y - e))) / (2 * e)
-            yaw = math.atan2(float(gx), -float(gy))
+            s = terrain.road(np.array([x + e, x - e, x, x]), np.array([y, y, y + e, y - e]))
+            yaw = math.atan2(s[0] - s[1], s[3] - s[2])
         else:
             x, y = place[0], place[1] * spacing
             yaw = 0.0 if x < 0 else math.pi
@@ -709,37 +704,29 @@ def scatter(terrain, z_at, rng, density, edge_density):
     # Distance to the nearest ground edge, real m, from the field values.
     edge = np.minimum(np.minimum(np.abs(soil) * SOIL_SIZE, np.abs(mud) * MUD_SIZE), np.abs(track))
     on_grass = (soil <= 0) & (mud <= 0) & (track <= 0)
-    d = density * on_grass + edge_density * np.exp(-(edge / TUFTS_EDGE_BAND) ** 2) * (mud <= 0) * (track <= 0)
+    d = density * on_grass + edge_density * np.exp(-(edge / CARDS_EDGE_BAND) ** 2) * (mud <= 0) * (track <= 0)
     # Thinning out towards the terrain border, where the surroundings go on without plants.
     d = d * (1 - Terrain._fade(x, y))
     keep = rng.uniform(0, peak, n) < d
     return x[keep], y[keep], z_at(x[keep], y[keep])
 
 
-def tufts(terrain, z_at, seed):
-    """3D grass tuft placements: [(tuft name, x, y, z, yaw, scale)]."""
-    rng = np.random.default_rng(seed * 7 + 5)
-    x, y, z = scatter(terrain, z_at, rng, TUFTS_DENSITY, TUFTS_EDGE_DENSITY)
-    names = [name for name in TUFTS if not name.startswith(TUFTS_SKIP)]
-    return [(names[rng.integers(len(names))], xi, yi, zi, rng.uniform(0, 2 * math.pi), rng.uniform(*TUFTS_SIZE) * SCALE)
-            for xi, yi, zi in zip(x, y, z)]
-
-
 def write_cards(out_dir, key, terrain, z_at, seed):
-    """Grass cards in one glTF: CARDS_PLANES crossed rectangles each, both sides lit alike; return ({name, mesh}, count)."""
+    """Grass cards in one glTF, CARDS_PLANES crossed rectangles each; {name, mesh} or None without cards."""
     rng = np.random.default_rng(seed * 7 + 6)
-    x, y, z = scatter(terrain, z_at, rng, CARDS_DENSITY, CARDS_EDGE_DENSITY)
+    grass = terrain.options.grass
+    x, y, z = scatter(terrain, z_at, rng, CARDS_DENSITY * grass, CARDS_EDGE_DENSITY * grass)
     n = len(x)
     if not n:
-        return None, 0
-    sprites = CARDS['sprites']
+        return None
+    sprites = CARDS
     weights = np.array([next((wt for prefix, wt in CARD_WEIGHTS if s['name'].startswith(prefix + '__')), 0.3)
                         for s in sprites])
     pick = rng.choice(len(sprites), n, p=weights / weights.sum())
     w = np.array([s['width'] for s in sprites])[pick]
     h = np.array([s['height'] for s in sprites])[pick]
     uv = np.array([s['uv'] for s in sprites])[pick]
-    scale = rng.uniform(*TUFTS_SIZE, n) * SCALE
+    scale = rng.uniform(*CARDS_SIZE, n) * SCALE
     w, h = w * scale, h * scale
     yaw = rng.uniform(0, math.pi, n)
     positions, uvs = [], []
@@ -762,71 +749,15 @@ def write_cards(out_dir, key, terrain, z_at, seed):
     base = np.arange(m)[:, None] * 4
     back = base + m * 4
     faces = np.concatenate([base + [0, 1, 2], base + [0, 2, 3], back + [0, 2, 1], back + [0, 3, 2]])
-    atlas = os.path.basename(CARDS['atlas'])
-    shutil.copy(os.path.join(ASSETS_DIR, CARDS['atlas']), os.path.join(out_dir, atlas))
+    atlas = os.path.basename(CARDS_ATLAS)
+    shutil.copy(os.path.join(ASSETS_DIR, CARDS_ATLAS), os.path.join(out_dir, atlas))
     material = dict(name='grass_cards', alphaMode='MASK', alphaCutoff=0.5,
                     pbrMetallicRoughness=dict(baseColorTexture=dict(index=0), metallicFactor=0.0, roughnessFactor=1.0))
     path = os.path.join(out_dir, f'grass_cards_{key}.gltf')
     p = positions.reshape(-1, 3)
     gltf.write(path, p, np.tile([0.0, 0.0, 1.0], (len(p), 1)), uvs.reshape(-1, 2), faces,
                material=material, images=[atlas])
-    return dict(name='grass_cards', mesh=path), n
-
-
-def thin_out(p, n, uv, f, rng, min_faces=200):
-    """Keep TUFTS_BLADES of the blades (connected parts) of a tuft mesh with more than min_faces triangles."""
-    if len(f) <= min_faces:
-        return p, n, uv, f
-    # Connected parts: spread the smallest vertex label over each triangle until nothing changes.
-    label = np.arange(len(p))
-    while True:
-        m = label[f].min(1)
-        new = label.copy()
-        np.minimum.at(new, f.reshape(-1), np.repeat(m, 3))
-        new = new[new]
-        if (new == label).all():
-            break
-        label = new
-    parts = np.unique(label)
-    keep_parts = parts[rng.uniform(0, 1, len(parts)) < TUFTS_BLADES]
-    faces = f[np.isin(label[f[:, 0]], keep_parts)]
-    used, faces = np.unique(faces, return_inverse=True)
-    return p[used], n[used], uv[used], faces.reshape(-1, 3).astype(np.uint32)
-
-
-def write_tufts(out_dir, key, placements):
-    """Merge the tufts of each Poly Haven model into one glTF; return [{name, mesh}]."""
-    by_asset = {}
-    for item in placements:
-        by_asset.setdefault(TUFTS[item[0]]['mesh'].split('/')[1], []).append(item)
-    meshes = []
-    for asset, items in sorted(by_asset.items()):
-        src_dir = os.path.join(ASSETS_DIR, 'models', asset)
-        parts, cache = [], {}
-        for name, x, y, z, yaw, scale in items:
-            if name not in cache:
-                g, buffers = gltf.read(os.path.join(ASSETS_DIR, TUFTS[name]['mesh']))
-                cache[name] = thin_out(*gltf.mesh_data(g, buffers, g['nodes'][0]['mesh']),
-                                       np.random.default_rng(len(cache)))
-                material, images = g['materials'][0], [i['uri'] for i in g['images']]
-            p, n, uv, f = cache[name]
-            # glTF Y-up (x, y, z) -> Z-up (x, -z, y), then scale, turn and move.
-            c, s = math.cos(yaw), math.sin(yaw)
-            rot = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]], np.float32)
-            p = np.stack([p[:, 0], -p[:, 2], p[:, 1]], -1) @ rot.T * scale + [x, y, z]
-            n = np.stack([n[:, 0], -n[:, 2], n[:, 1]], -1) @ rot.T
-            parts.append((p, n, uv, f))
-        offsets = np.cumsum([0] + [len(part[0]) for part in parts[:-1]])
-        # Copy the textures next to the merged mesh; their names include the asset name.
-        for uri in images:
-            shutil.copy(os.path.join(src_dir, uri), os.path.join(out_dir, os.path.basename(uri)))
-        path = os.path.join(out_dir, f'tufts_{asset}_{key}.gltf')
-        gltf.write(path, np.concatenate([part[0] for part in parts]), np.concatenate([part[1] for part in parts]),
-                   np.concatenate([part[2] for part in parts]),
-                   np.concatenate([part[3] + o for part, o in zip(parts, offsets)]),
-                   material=material, images=[os.path.basename(u) for u in images])
-        meshes.append(dict(name=asset, mesh=path))
-    return meshes
+    return dict(name='grass_cards', mesh=path)
 
 
 def ground_color(ground):
@@ -848,79 +779,9 @@ def ground_texture(cache_dir, ground):
     return textures.make(texture, os.path.join(cache_dir, 'textures'), name, seed=len(ground))
 
 
-def build(cache_dir, relief_name, seed):
-    """Build the terrain files into a cache_dir subdirectory (if not built yet) and return the terrain.yaml path."""
-    # The key covers this code, the parameter files and the source data.
-    params = repr((relief_name, seed, PARAMS, GROUNDS, PLANTS, sorted(OPTIONS.items())))
-    for path in (__file__, textures.__file__, trees.__file__, os.path.join(HERE, 'config', 'trees.yaml'),
-                 os.path.join(HERE, 'config', 'relief', 'steppe.png')):
-        with open(path, 'rb') as f:
-            params += hashlib.sha1(f.read()).hexdigest()
-    key = hashlib.sha1(params.encode()).hexdigest()[:10]
-    out_dir = os.path.join(cache_dir, 'terrain_' + key)
-    info_path = os.path.join(out_dir, 'terrain.yaml')
-    if os.path.isfile(info_path):
-        return info_path
-
-    os.makedirs(out_dir, exist_ok=True)
-    terrain = Terrain(relief_name, seed)
-    x, y = grid()
-    fields = terrain.fields(x, y)
-    z = terrain.heights(x, y, fields)
-    z_offset = z.mean()
-    z -= z_offset
-    # The height map is lower under the grounds with their own collision meshes.
-    lab = labels(fields)
-    own = np.isin(lab, [GARDEN_GROUNDS.index(g) for g in OWN_COLLISION])
-    z_collision = z - FRICTION_GAP * own
-    z_min, z_max = float(z_collision.min()), float(z_collision.max())
-    heightmap = os.path.join(out_dir, f'heightmap_{key}.png')
-    data = np.round((z_collision - z_min) / (z_max - z_min) * 65535)
-    Image.fromarray(data.astype(np.uint16)).save(heightmap)
-
-    grounds = []
-    k = VISUAL_STEP
-    meshes = ground_meshes(x[::k, ::k], y[::k, ::k], z[::k, ::k], grid_normals(z[::k, ::k], STEP * k),
-                           [f[::k, ::k] for f in fields])
-    for name, (p, n, f) in zip(GARDEN_GROUNDS, meshes):
-        if not len(f):
-            continue
-        mesh = os.path.join(out_dir, f'ground_{name}_{key}.gltf')
-        write_ground(mesh, p, n, f, macro_tile(name))
-        grounds.append(dict(name=name, mesh=mesh, texture=ground_texture(cache_dir, name), color=ground_color(name),
-                            collision=name in OWN_COLLISION, mu=GROUNDS[name]['mu']))
-
-    def z_at(px, py):
-        """Terrain heights at points, bilinear on the grid."""
-        c = np.clip((px + SIZE / 2) / STEP, 0, SAMPLES - 1.001)
-        r = np.clip((SIZE / 2 - py) / STEP, 0, SAMPLES - 1.001)
-        c0, r0 = c.astype(int), r.astype(int)
-        fc, fr = c - c0, r - r0
-        return (z[r0, c0] * (1 - fc) * (1 - fr) + z[r0, c0 + 1] * fc * (1 - fr)
-                + z[r0 + 1, c0] * (1 - fc) * fr + z[r0 + 1, c0 + 1] * fc * fr)
-
-    placements = tufts(terrain, z_at, seed) if TUFTS_DENSITY + TUFTS_EDGE_DENSITY > 0 else []
-    plants = write_tufts(out_dir, key, placements) if placements else []
-    cards, card_count = write_cards(out_dir, key, terrain, z_at, seed)
-    if card_count:
-        plants.append(cards)
-    orchard = trees.build(out_dir, key, z_at, seed, PLANTS['clusters'])
-    water = os.path.join(out_dir, f'water_{key}.gltf')
-    wet = [f for f in terrain.pits + terrain.puddles if f[4]]
-    write_water(water, x, y, z, wet)
-    water = water if os.path.isfile(water) else ''
-
-    features = dict(water=water, water_color=WATER_COLOR, water_roughness=WATER_ROUGHNESS,
-                    pits=[dict(x=round(float(px), 3), y=round(float(py), 3), radius=round(r * SCALE, 3),
-                               depth=round(d * SCALE, 3), water=w) for px, py, r, d, w, *_ in terrain.pits],
-                    puddles=[dict(x=round(float(px), 3), y=round(float(py), 3), length=round(2 * r * SCALE, 3),
-                                  depth=round(d * SCALE, 3)) for px, py, r, d, *_ in terrain.puddles])
-    starts = start_points(terrain, z_at)
-
-    # Surrounding rings without the cells well inside the ring inside them;
-    # the cells along its border are kept and lowered a little, under it.
-    surroundings = []
-    inner = SIZE
+def write_surroundings(out_dir, key, cache_dir, terrain, z_offset):
+    """Rings around the terrain, without the cells well inside the next ring in; their border cells go under it."""
+    surroundings, inner = [], SIZE
     for i, (ring_size, ring_step) in enumerate(RINGS):
         ox, oy = grid(ring_size, ring_step)
         oz = terrain.horizon(ox, oy) - z_offset
@@ -939,16 +800,68 @@ def build(cache_dir, relief_name, seed):
         surroundings.append(dict(name=f'ring{i}', mesh=mesh, texture=ground_texture(cache_dir, OUTSIDE),
                                  color=ground_color(OUTSIDE)))
         inner = ring_size
+    return surroundings
 
-    slope = np.degrees(np.arctan(np.hypot(*np.gradient(z, STEP))))
-    info = dict(
-        relief=relief_name, seed=seed, scale=SCALE,
-        size=SIZE, samples=SAMPLES, z_min=z_min, z_max=z_max,
-        heightmap=heightmap, mu=GROUNDS[OUTSIDE]['mu'], grounds=grounds, plants=plants, trees=orchard,
-        surroundings=surroundings, features=features, start_points=starts,
-        tufts=len(placements), cards=card_count, shares={name: round(float((lab == g).mean()), 3) for g, name in enumerate(GARDEN_GROUNDS)},
-        max_slope=float(slope.max()), p99_slope=float(np.percentile(slope, 99)),
-    )
+
+def build(cache_dir, relief_name, seed, options=Options()):
+    """Build the terrain files into a cache_dir subdirectory (if not built yet) and return the terrain.yaml path."""
+    grounds_cfg = options.grounds()
+    # The key covers the options, this code, the parameter files and the source data.
+    params = repr((relief_name, seed, grounds_cfg, CARDS, options))
+    for path in (__file__, textures.__file__, trees.__file__, os.path.join(HERE, 'relief', 'steppe.png')):
+        with open(path, 'rb') as f:
+            params += hashlib.sha1(f.read()).hexdigest()
+    key = hashlib.sha1(params.encode()).hexdigest()[:10]
+    out_dir = os.path.join(cache_dir, 'terrain_' + key)
+    info_path = os.path.join(out_dir, 'terrain.yaml')
+    if os.path.isfile(info_path):
+        return info_path
+
+    os.makedirs(out_dir, exist_ok=True)
+    terrain = Terrain(relief_name, seed, options)
+    x, y = grid()
+    fields = terrain.fields(x, y)
+    z = terrain.heights(x, y, fields)
+    z_offset = z.mean()
+    z -= z_offset
+    # The height map is lower under the grounds with their own collision meshes.
+    own = np.isin(labels(fields), [GARDEN_GROUNDS.index(g) for g in OWN_COLLISION])
+    z_collision = z - FRICTION_GAP * own
+    z_min, z_max = float(z_collision.min()), float(z_collision.max())
+    heightmap = os.path.join(out_dir, f'heightmap_{key}.png')
+    data = np.round((z_collision - z_min) / (z_max - z_min) * 65535)
+    Image.fromarray(data.astype(np.uint16)).save(heightmap)
+
+    grounds = []
+    k = VISUAL_STEP
+    meshes = ground_meshes(x[::k, ::k], y[::k, ::k], z[::k, ::k], grid_normals(z[::k, ::k], STEP * k),
+                           [f[::k, ::k] for f in fields])
+    for name, (p, n, f) in zip(GARDEN_GROUNDS, meshes):
+        if not len(f):
+            continue
+        mesh = os.path.join(out_dir, f'ground_{name}_{key}.gltf')
+        write_ground(mesh, p, n, f, macro_tile(name))
+        grounds.append(dict(name=name, mesh=mesh, texture=ground_texture(cache_dir, name), color=ground_color(name),
+                            collision=name in OWN_COLLISION, mu=grounds_cfg[name]['mu']))
+
+    def z_at(px, py):
+        return bilinear(z, (px + SIZE / 2) / STEP, (SIZE / 2 - py) / STEP)
+
+    cards = write_cards(out_dir, key, terrain, z_at, seed)
+    orchard = trees.build(out_dir, key, z_at, seed, options.tree_rows)
+    water = write_water(os.path.join(out_dir, f'water_{key}.gltf'), x, y, z,
+                        [h for h in terrain.pits + terrain.puddles if h.water])
+    features = dict(water=water, water_color=WATER_COLOR, water_roughness=WATER_ROUGHNESS,
+                    pits=[dict(x=round(float(p.x), 3), y=round(float(p.y), 3), radius=round(p.r * SCALE, 3),
+                               depth=round(p.depth * SCALE, 3), water=p.water) for p in terrain.pits],
+                    puddles=[dict(x=round(float(p.x), 3), y=round(float(p.y), 3), length=round(2 * p.r * SCALE, 3),
+                                  depth=round(p.depth * SCALE, 3)) for p in terrain.puddles])
+
+    surroundings = write_surroundings(out_dir, key, cache_dir, terrain, z_offset)
+
+    info = dict(size=SIZE, z_min=z_min, z_max=z_max, heightmap=heightmap, mu=grounds_cfg[OUTSIDE]['mu'],
+                grounds=grounds, plants=[cards] if cards else [], trees=orchard, surroundings=surroundings,
+                features=features, start_points=start_points(terrain, z_at))
     with open(info_path, 'w') as f:
         yaml.safe_dump(info, f, sort_keys=False)
     return info_path

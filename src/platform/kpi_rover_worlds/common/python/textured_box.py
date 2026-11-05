@@ -6,11 +6,7 @@ for a wall 'segment' m long and WALL_TEXTURE_HEIGHT m high (walls.yaml) is
 stretched or squashed on boxes of other sizes, e.g. short walls and arch
 posts. These meshes keep the texture at its real size on every face, with
 the texture height counted from the floor (a lintel shows the top of the
-texture, as the wall around it does).
-
-World generators make the meshes their walls and arches need at launch and
-give the xacro world a dict {mesh_key(...): OBJ path} ('wall_meshes', see
-walls.xacro); walls without a mesh fall back to box segments.
+texture, as the wall around it does). sdf.solid_box makes them for its wall materials.
 """
 
 import hashlib
@@ -18,11 +14,6 @@ import os
 
 CACHE_DIR = os.path.join(os.path.expanduser('~'), '.cache', 'kpi_rover', 'meshes')
 WALL_TEXTURE_HEIGHT = 0.5
-
-
-def mesh_key(sx, sy, sz, material, z0=0.0):
-    """Key of a box mesh, the same as walls.xacro builds it."""
-    return '%.4fx%.4fx%.4f@%.4f/%s' % (sx, sy, sz, z0, material)
 
 
 def box_mesh(sx, sy, sz, tile_u, tile_v, z0=0.0):
@@ -71,20 +62,3 @@ def box_mesh(sx, sy, sz, tile_u, tile_v, z0=0.0):
         f.write('\n'.join(lines) + '\n')
     os.replace(tmp, path)
     return path
-
-
-def wall_meshes(boxes, material, walls_cfg):
-    """
-    {mesh_key: OBJ path} for boxes [(sx, sy, sz, z0)] of a walls.yaml
-    material; empty for an untextured material (a plain color needs none).
-    """
-    cfg = walls_cfg.get(material) or {}
-    if not cfg.get('texture'):
-        return {}
-    return {mesh_key(sx, sy, sz, material, z0): box_mesh(sx, sy, sz, cfg['segment'], WALL_TEXTURE_HEIGHT, z0)
-            for sx, sy, sz, z0 in boxes}
-
-
-def perimeter_boxes(size_x, size_y, height=0.5, thickness=0.1):
-    """Boxes of the perimeter walls of walls.xacro around a size_x x size_y area."""
-    return [(size_x + 2 * thickness, thickness, height, 0.0), (size_y, thickness, height, 0.0)]
