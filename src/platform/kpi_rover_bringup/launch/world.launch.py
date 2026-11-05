@@ -1,8 +1,15 @@
 from launch import LaunchDescription
-from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    AppendEnvironmentVariable, DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, SetLaunchConfiguration)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.substitutions import FindPackageShare
+
+from kpi_rover_worlds import world_info
+
+
+def world_file(context):
+    return [SetLaunchConfiguration('world', world_info.build(context.launch_configurations['world'], {}))]
 
 
 def generate_launch_description():
@@ -14,9 +21,8 @@ def generate_launch_description():
 
     declared_arguments = [
         DeclareLaunchArgument(
-            'world',
-            default_value=PathJoinSubstitution([FindPackageShare('kpi_rover_worlds'), 'worlds', 'room', 'room.world']),
-            description='Path to the Gazebo world file'),
+            'world', default_value='room',
+            description='World of kpi_rover_worlds (python3 -m kpi_rover_worlds.world_info) or path to a world file'),
         DeclareLaunchArgument(
             'gui', default_value='true',
             description='Start the Gazebo GUI (otherwise headless server only)'),
@@ -44,5 +50,6 @@ def generate_launch_description():
 
     return LaunchDescription(declared_arguments + [
         gz_resource_path,
+        OpaqueFunction(function=world_file),
         gazebo,
     ])
