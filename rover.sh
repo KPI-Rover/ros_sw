@@ -54,6 +54,8 @@ robot_env() { on_robot "sed -n 's/^$1=//p' .env"; }
 # ---------- PC ----------
 
 pc_env() {
+  docker compose version > /dev/null 2>&1 ||
+    die "Docker Compose v2 is not installed (\`docker compose\` does not work). On Ubuntu with docker.io: sudo apt install docker-compose-v2; with Docker CE: sudo apt install docker-compose-plugin"
   export HOST_UID HOST_GID VIDEO_GID RENDER_GID
   HOST_UID=$(id -u)
   HOST_GID=$(id -g)
@@ -65,7 +67,10 @@ pc_env() {
     xhost +local:docker > /dev/null
   fi
   PC_SERVICE=${PC_SERVICE:-pc}
-  if [ "$PC_SERVICE" = pc ] && command -v nvidia-container-runtime > /dev/null && docker info --format "{{json .Runtimes}}" 2> /dev/null | grep -q nvidia; then
+  # WSL2 exposes the Windows GPU as /dev/dxg (any vendor), rendering goes through Mesa's d3d12 driver
+  if [ "$PC_SERVICE" = pc ] && [ -e /dev/dxg ]; then
+    PC_SERVICE=pc-wsl
+  elif [ "$PC_SERVICE" = pc ] && command -v nvidia-container-runtime > /dev/null && docker info --format "{{json .Runtimes}}" 2> /dev/null | grep -q nvidia; then
     PC_SERVICE=pc-nvidia
   fi
 }
@@ -221,6 +226,7 @@ cmd_doctor() {
   echo "os:       $(. /etc/os-release && echo "$PRETTY_NAME")"
   echo "docker:   $(docker version --format '{{.Server.Version}}' 2>&1)"
   echo "compose:  $(docker compose version --short 2>&1)"
+  [ -e /dev/dxg ] && echo "wsl:      $(uname -r), WSLg: $([ -d /mnt/wslg ] && echo yes || echo no)"
   echo "groups:   video=$(getent group video | cut -d: -f3) render=$(getent group render | cut -d: -f3)"
   command -v nvidia-smi > /dev/null && echo "gpu:      $(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1)"
   if [ -n "${DISPLAY:-}" ]; then
