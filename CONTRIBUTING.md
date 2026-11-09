@@ -11,8 +11,10 @@ every change goes through a short-lived branch and a pull request.
 1. **Issue.** Every change starts with an issue: what and why. Take an existing one or create a new one.
 2. **Branch** from `main`, named `<issue number>-<short-description>`, e.g. `57-imu-calibration`.
    The *Create a branch* button in the issue (*Development* section) makes exactly this name.
-3. **Commits** in the branch: small, each one builds. Messages are free-form in the branch, but should say
-   what changed.
+3. **Commits** in the branch: small, each one builds. Write the messages in the same
+   [Conventional Commits](#pull-request-title) format as the PR title, e.g. `fix(hw): reconnect after a UART timeout`.
+   This is a recommendation, CI does not check it: the branch commits do not get into `main` (squash), but the
+   history of the PR is easier to review.
 4. **Pull request** into `main` as soon as there is something to show, mark it as *Draft* while it is not ready.
    The PR title follows [Conventional Commits](#pull-request-title), the description
    [links the issue](#links-to-issues) (`Closes #57`).
@@ -27,7 +29,8 @@ topic: a fix found on the way goes to a separate PR.
 ## Pull request title
 
 The PR title becomes the commit message in `main`, so it follows
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). CI checks it.
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). CI checks it. Use the same format for
+the commit messages in the branch (recommended, not checked).
 
 ```
 <type>(<scope>): <description>
