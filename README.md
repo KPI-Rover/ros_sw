@@ -316,7 +316,7 @@ flowchart LR
 If you change headers or interfaces (messages, services) of a package, add the packages that depend on it to
 the overlay too. A new dependency in `package.xml` is not in the image: use a branch image for that.
 
-**Whole branch: branch image.** Push the branch, open *Actions → Build images → Run workflow*, choose the
+**Whole branch: branch image.** Push the branch, open *Actions → Images → Run workflow*, choose the
 branch. When the workflow is finished:
 ```bash
 ./rover.sh use my-branch     # back to the normal version: ./rover.sh use main

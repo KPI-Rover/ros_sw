@@ -2,7 +2,7 @@
 #   push to main          -> tags `main` and `sha-<commit>`
 #   Run workflow (Actions) -> tags `<branch>` and `sha-<commit>`, for testing a branch on a robot
 #   pull request          -> build only, nothing is published
-name: Build images
+name: Images
 
 on:
   push:
@@ -24,6 +24,7 @@ env:
 
 jobs:
   pc:
+    name: build pc
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -56,6 +57,7 @@ jobs:
           cache-to: ${{ env.PUSH == 'true' && format('type=registry,ref={0}/pc:buildcache,mode=max', env.REGISTRY) || '' }}
 
   robot:
+    name: build robot
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
