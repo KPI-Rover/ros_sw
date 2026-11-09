@@ -1,7 +1,7 @@
 # Checks the pull request (see CONTRIBUTING.md), the PR becomes one commit in main when it is squash-merged:
 # - the title follows Conventional Commits, it becomes the commit message;
 # - the description links an issue (Closes #N or Refs #N).
-name: PR rules
+name: PR
 
 on:
   pull_request:
@@ -11,6 +11,7 @@ permissions: {}
 
 jobs:
   check:
+    name: title and issue link
     runs-on: ubuntu-24.04
     steps:
       - name: Title follows Conventional Commits

@@ -1,6 +1,6 @@
 # Deletes the images of a branch from ghcr.io/kpi-rover when the branch is deleted.
 # Images that are also tagged `main` are kept.
-name: Clean up images
+name: Images cleanup
 
 on:
   delete:
@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   cleanup:
+    name: clean up
     if: github.event.ref_type == 'branch'
     runs-on: ubuntu-24.04
     steps:
