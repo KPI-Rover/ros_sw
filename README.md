@@ -33,7 +33,7 @@ and `log/` next to it.
 | `src/external/` | external packages imported from `deps.repos` (not in git) |
 | `deps.repos` | external packages that are not in apt, pinned to a commit |
 | `docker/Dockerfile` | all images: `pc`, `robot` |
-| `docker-compose.yaml` | PC side (service `pc`) |
+| `docker-compose.yaml` | PC side (service `pc`, with GPU variants `pc-nvidia` and `pc-wsl`) |
 | `scripts/rpi-setup/` | robot side: compose file, setup script, udev rules. Installed to `~/kpi-rover` on the robot |
 | `rover.sh` | one entry point for everything below, `./rover.sh help` |
 
@@ -103,9 +103,36 @@ Image tags: `main` (current version), `<branch>` (built on request), `sha-<commi
 
 ## Simulation on a PC
 
-Requirements: Linux with Docker ([without sudo](https://docs.docker.com/engine/install/linux-postinstall/)) and an X server.
+Requirements: Linux (or Windows with WSL2, see below) with Docker ([without sudo](https://docs.docker.com/engine/install/linux-postinstall/)),
+the Docker Compose v2 plugin (`docker compose version` must work) and an X server. Ubuntu's own `docker.io` package
+does not include Compose: `sudo apt install docker-compose-v2` (with Docker CE from docker.com: `docker-compose-plugin`).
 
-**NVIDIA GPU.** Without [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+**Windows (WSL2).** Works with WSL2 and WSLg (Windows 11, or Windows 10 with WSL from the Microsoft Store: run
+`wsl --update` in Windows). Check in WSL: `ls /mnt/wslg /dev/dxg` must show both. Install Docker inside WSL as
+on Ubuntu (above). The GPU driver is the normal Windows driver, **do not install a Linux GPU driver or
+nvidia-container-toolkit in WSL**. `rover.sh` detects WSL (`/dev/dxg`) and uses the service `pc-wsl`: Gazebo and
+RViz render on the Windows GPU through Mesa's d3d12 driver, for NVIDIA, AMD and Intel. The renderer check below
+shows `D3D12 (<your GPU>)`. A laptop with two GPUs may pick the integrated one, choose another by a part of
+its name: `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA ./rover.sh pc`.
+Keep the repository in the WSL file system (e.g. `~/ros_sw`), not on a Windows drive (`/mnt/c/...`): there
+building and Gazebo are several times slower.
+
+**WSL and the real robot: mirrored networking.** By default WSL2 is behind NAT: ssh to the robot works, but
+ROS 2 topics do not (the robot cannot reach the PC, multicast discovery does not pass). Simulation alone does not
+need this. Switch WSL to the mirrored mode once: in Windows create `%UserProfile%\.wslconfig` with
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+then run `wsl --shutdown` in Windows and open WSL again. WSL then has the same IP address as Windows
+(`hostname -I` in WSL shows the address of the Windows Wi-Fi/Ethernet). If the robot's topics are still not
+visible, Windows Firewall blocks the incoming DDS traffic: allow it for the Hyper-V firewall of WSL once, in
+PowerShell as administrator:
+```powershell
+Set-NetFirewallHyperVVMSetting -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -DefaultInboundAction Allow
+```
+
+**NVIDIA GPU (Linux).** Without [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 Gazebo and RViz render on the CPU and are very slow. Install it once (Ubuntu/Debian, the NVIDIA driver must already work: `nvidia-smi`):
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -319,7 +346,10 @@ students can pull them without a login (organization package settings).
 
 | Problem | Reason / solution |
 |---|---|
-| Gazebo is very slow | Check `./rover.sh doctor`: `renderer` must not be `llvmpipe` (CPU rendering). Intel/AMD: the user must be in the `video` and `render` groups. NVIDIA: install nvidia-container-toolkit. |
+| `unknown flag: --rm` or `Docker Compose v2 is not installed` | The Compose plugin is missing: `sudo apt install docker-compose-v2` (Ubuntu `docker.io`) or `docker-compose-plugin` (Docker CE). |
+| Gazebo is very slow | Check `./rover.sh doctor`: `renderer` must not be `llvmpipe` (CPU rendering). Intel/AMD: the user must be in the `video` and `render` groups. NVIDIA: install nvidia-container-toolkit. WSL: `wsl` must be shown in `doctor` with `WSLg: yes`, update the Windows GPU driver and run `wsl --update`. |
+| WSL: the renderer is the wrong GPU (e.g. Intel instead of NVIDIA) | `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA ./rover.sh pc` |
+| WSL: ssh to the robot works, but no topics in RViz / `ros2 topic list` | WSL is behind NAT: switch to mirrored networking and allow inbound traffic, see [Simulation on a PC](#simulation-on-a-pc) (Windows (WSL2)). |
 | RViz does not show the robot | Same network? `./rover.sh rviz` uses the robot's `ROS_DOMAIN_ID` and its address as a static peer, so multicast is not required. |
 | The robot software restarts in a loop | `./rover.sh logs`. `device ... not found`: check the lidar cable and `./rover.sh doctor` (devices). |
 | `./rover.sh use my-branch` cannot download the image | The workflow for the branch has not finished, or failed. Check *Actions*. |

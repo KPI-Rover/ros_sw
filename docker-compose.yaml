@@ -45,3 +45,21 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+
+  # The same on Windows (WSL2 with WSLg). The GPU of Windows is reached through /dev/dxg and Mesa's d3d12 driver,
+  # for any vendor (NVIDIA, AMD, Intel); the GPU libraries come from Windows in /usr/lib/wsl/lib. No
+  # nvidia-container-toolkit is needed for rendering.
+  pc-wsl:
+    extends: pc
+    profiles: [wsl]
+    environment:
+      - LD_LIBRARY_PATH=/usr/lib/wsl/lib
+      - GALLIUM_DRIVER=d3d12
+      # Several GPUs (e.g. a laptop with Intel + NVIDIA): pick one by a part of its name, e.g. NVIDIA
+      # (passed only when set on the host)
+      - MESA_D3D12_DEFAULT_ADAPTER_NAME
+    volumes:
+      - /usr/lib/wsl:/usr/lib/wsl:ro
+      - /mnt/wslg:/mnt/wslg
+    devices:
+      - /dev/dxg:/dev/dxg
