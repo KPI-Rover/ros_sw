@@ -8,3 +8,4 @@
 .rover
 .docker_home/
 .ros/
+__pycache__/

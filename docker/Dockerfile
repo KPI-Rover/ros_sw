@@ -71,9 +71,12 @@ CMD ["zellij"]
 FROM ros:${ROS_DISTRO}-ros-base AS build-deps
 ARG SIM_ONLY_KEYS
 COPY --from=manifests /src /tmp/src
-RUN apt-get update && \
+# kpi_rover_worlds is built, but its tools (world generation, previews) are not run on the robot:
+# their dependencies (numpy, scipy, PIL, Gazebo) are not installed.
+RUN rm -rf /tmp/src/platform/kpi_rover_worlds && \
+    apt-get update && \
     rosdep update --rosdistro "$ROS_DISTRO" && \
-    rosdep install --from-paths /tmp/src --ignore-src -y --skip-keys "$SIM_ONLY_KEYS" && \
+    rosdep install --from-paths /tmp/src --ignore-src -y --skip-keys "$SIM_ONLY_KEYS kpi_rover_worlds" && \
     rm -rf /var/lib/apt/lists/* /tmp/src
 
 
