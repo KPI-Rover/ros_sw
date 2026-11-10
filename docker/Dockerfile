@@ -71,7 +71,8 @@ CMD ["zellij"]
 FROM ros:${ROS_DISTRO}-ros-base AS build-deps
 ARG SIM_ONLY_KEYS
 COPY --from=manifests /src /tmp/src
-# kpi_rover_worlds is not built for the robot (see build), so neither are its dependencies (numpy, scipy, PIL) installed.
+# kpi_rover_worlds is built, but its tools (world generation, previews) are not run on the robot:
+# their dependencies (numpy, scipy, PIL, Gazebo) are not installed.
 RUN rm -rf /tmp/src/platform/kpi_rover_worlds && \
     apt-get update && \
     rosdep update --rosdistro "$ROS_DISTRO" && \
@@ -86,11 +87,9 @@ COPY --from=deps-src /deps /ws/src
 COPY src /ws/src
 # build/ is a BuildKit cache mount kept between builds on the same machine, so only changed files are recompiled.
 # --cmake-clean-cache: a cached CMakeCache.txt breaks the build when a package moves to another directory.
-# kpi_rover_worlds (Gazebo worlds and their media) is for the simulation only, not for the robot.
 RUN --mount=type=cache,target=/ws/build,id=kpi-rover-colcon-build \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    colcon build --merge-install --cmake-clean-cache --packages-skip kpi_rover_worlds \
-      --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+    colcon build --merge-install --cmake-clean-cache --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
 
 
 # ---- robot: the built workspace + build tools, so packages can be rebuilt on the robot as an overlay
