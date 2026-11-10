@@ -11,6 +11,10 @@
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
   <exec_depend>ament_index_python</exec_depend>
+  <!-- render_previews.py and spawn_object.py: gz sim and its Python bindings -->
+  <exec_depend>gz_msgs_vendor</exec_depend>
+  <exec_depend>gz_sim_vendor</exec_depend>
+  <exec_depend>gz_transport_vendor</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-pil</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
