@@ -68,7 +68,7 @@
             <!--
               Hide world visuals meant only for the Gazebo GUI (bit 1) and
               visuals the lidar must not see, such as grass (bit 2); see
-              kpi_rover_worlds/common/xacro/base.xacro.
+              kpi_rover_worlds/common/python/sdf.py.
             -->
             <visibility_mask>4294967289</visibility_mask>
         </lidar>

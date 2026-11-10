@@ -61,7 +61,7 @@ from kpi_rover_worlds import world_info
 # The robot camera relative to a start point: ahead, up (m), pitch and horizontal fov (degrees).
 ROBOT_CAMERA = (0.135, 0.31, 3, 70)
 
-# Visibility masks of the preview cameras: like the robot camera (description/camera.xacro), which
+# Visibility masks of the preview cameras: like the robot camera (kpi_rover_description/urdf/camera.xacro), which
 # doesn't see helpers shown only in the Gazebo window, or like the Gazebo window itself (cameras
 # listed in 'gui_cameras' of the previews).
 ROBOT_MASK = 4294967293
