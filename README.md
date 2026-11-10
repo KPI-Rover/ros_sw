@@ -174,6 +174,12 @@ its previews.
 `sim.launch.py` is `world.launch.py` (Gazebo with the world) and `sim_robot.launch.py` (the simulated robot with the
 same localization, SLAM and navigation as the real one) together, with RViz and joystick teleop; tools such as the
 GUI start them one by one.
+
+**Camera.** The simulated robot has a camera on the front of the body, a temporary one until the real robot gets
+one: `/camera/image_raw` (also compressed through `image_transport`) and `/camera/camera_info`, 640×480 at 30 Hz,
+frame `camera_rgb_frame`. RViz shows it in the *Camera* display (disabled by default). `camera:=false` starts the
+model without the camera.
+
 In a simulation shared by several robots each one is started with `sim_robot.launch.py robot_ns:=<name>`: the name
 is given to the model, its Gazebo topics and its controller manager. The topics of the controller manager move under
 `/<name>` too (`robot_description`, `joint_states`, `diff_drive_controller/cmd_vel`, `diff_drive_controller/odom`), so
