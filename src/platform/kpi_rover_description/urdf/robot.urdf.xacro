@@ -8,11 +8,14 @@
     <xacro:arg name="wheel_radius" default="0.034"/>
     <!-- Name of the robot in a simulation shared by several robots (Gazebo topics, controller manager namespace) -->
     <xacro:arg name="robot_ns" default=""/>
+    <xacro:arg name="camera" default="false"/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />
     <xacro:include filename="robot_core.xacro" />
-    <!-- <xacro:include filename="camera.xacro" /> -->
+    <xacro:if value="$(arg camera)">
+        <xacro:include filename="camera.xacro" />
+    </xacro:if>
     <xacro:include filename="ros2_control.xacro" />
     <xacro:include filename="imu.xacro" />
     <xacro:include filename="lidar.xacro" />

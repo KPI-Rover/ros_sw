@@ -8,7 +8,8 @@
   <joint name="camera_joint" type="fixed">
       <parent link="base_link"/>
       <child link="camera_link"/>
-      <origin xyz="${base_x_size/2} 0 ${base_z_size}" rpy="0 0 0"/>
+      <!-- A temporary mount on the front of the body, until the real camera is chosen -->
+      <origin xyz="0.11 0 0.09" rpy="0 0 0"/>
   </joint>
 
   <link name="camera_link">
@@ -35,16 +36,16 @@
           <always_on>true</always_on>
           <visualize>true</visualize>
           <update_rate>30</update_rate>
-          <topic>camera/image_raw</topic>
+          <topic>$(arg robot_ns)/camera/image_raw</topic>
           <gz_frame_id>camera_rgb_frame</gz_frame_id>
           <camera name="intel_realsense_r200">
-            <camera_info_topic>camera/camera_info</camera_info_topic>
+            <camera_info_topic>$(arg robot_ns)/camera/camera_info</camera_info_topic>
             <horizontal_fov>1.02974</horizontal_fov>
             <!-- Hide world visuals meant only for the Gazebo GUI (bit 1, see kpi_rover_worlds/common/python/sdf.py) -->
             <visibility_mask>4294967293</visibility_mask>
             <image>
-              <width>1920</width>
-              <height>1080</height>
+              <width>640</width>
+              <height>480</height>
               <format>R8G8B8</format>
             </image>
             <clip>

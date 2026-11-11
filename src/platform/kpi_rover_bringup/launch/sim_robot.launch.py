@@ -18,6 +18,7 @@ def generate_launch_description():
     z_pose = LaunchConfiguration('z_pose')
     yaw_pose = LaunchConfiguration('yaw_pose')
     robot_ns = LaunchConfiguration('robot_ns')
+    camera = LaunchConfiguration('camera')
 
     declared_arguments = [
         DeclareLaunchArgument(
@@ -41,6 +42,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'load_controllers', default_value='true',
             description='Load the controllers; false when something else loads them'),
+        DeclareLaunchArgument(
+            'camera', default_value='true',
+            description='Add the camera to the model: /camera/image_raw, /camera/camera_info'),
     ]
 
     # robot_state_publisher with the sim_mode URDF (gz_ros2_control plugin)
@@ -52,6 +56,7 @@ def generate_launch_description():
             'sim_mode': 'true',
             'wheel_radius': wheel_radius,
             'robot_ns': robot_ns,
+            'camera': camera,
         }.items(),
     )
 
@@ -79,6 +84,19 @@ def generate_launch_description():
             'expand_gz_topic_names': True,
         }],
         output='screen',
+    )
+
+    # The image goes through ros_gz_image, not gz_bridge.yaml: it adds the image_transport topics (compressed).
+    # The Gazebo topic is <robot_ns>/camera/image_raw, the ROS topics /camera/image_raw[/<transport>]:
+    # image_transport names its topics from the topic before the remapping, so each one is remapped
+    camera_bridge = Node(
+        package='ros_gz_image',
+        executable='image_bridge',
+        arguments=[[robot_ns, '/camera/image_raw']],
+        remappings=[([robot_ns, '/camera/image_raw' + t], '/camera/image_raw' + t)
+                    for t in ('', '/compressed', '/compressedDepth', '/theora', '/zstd')],
+        output='screen',
+        condition=IfCondition(camera),
     )
 
     joint_state_broadcaster = Node(
@@ -148,6 +166,7 @@ def generate_launch_description():
         description,
         spawn_robot,
         gz_bridge,
+        camera_bridge,
         spawn_controllers,
         twist_stamper,
         localization,

@@ -17,6 +17,7 @@ def generate_launch_description():
     baud_rate = LaunchConfiguration('baud_rate')
     wheel_radius = LaunchConfiguration('wheel_radius')
     robot_ns = LaunchConfiguration('robot_ns')
+    camera = LaunchConfiguration('camera')
 
     pkg_share = FindPackageShare('kpi_rover_description')
     
@@ -30,7 +31,8 @@ def generate_launch_description():
         ' serial_device:=', serial_device,
         ' baud_rate:=', baud_rate,
         ' wheel_radius:=', wheel_radius,
-        ' robot_ns:=', robot_ns
+        ' robot_ns:=', robot_ns,
+        ' camera:=', camera
     ])
 
     # Launch!
@@ -59,6 +61,10 @@ def generate_launch_description():
             'robot_ns',
             default_value='',
             description='Name of the robot in a simulation shared by several robots (Gazebo topics, controller manager)'),
+        DeclareLaunchArgument(
+            'camera',
+            default_value='false',
+            description='Add the camera to the model'),
 
         Node(
             package='robot_state_publisher',
