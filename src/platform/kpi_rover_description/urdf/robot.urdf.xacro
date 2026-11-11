@@ -6,6 +6,8 @@
     <xacro:arg name="baud_rate" default="921600"/>
     <xacro:arg name="encoder_ticks_per_rev" default="1320"/>
     <xacro:arg name="wheel_radius" default="0.034"/>
+    <!-- Name of the robot in a simulation shared by several robots (Gazebo topics, controller manager namespace) -->
+    <xacro:arg name="robot_ns" default=""/>
     
     <xacro:include filename="materials.xacro" />
     <xacro:include filename="inertia.xacro" />
