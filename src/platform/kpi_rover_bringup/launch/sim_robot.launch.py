@@ -87,12 +87,14 @@ def generate_launch_description():
     )
 
     # The image goes through ros_gz_image, not gz_bridge.yaml: it adds the image_transport topics (compressed).
-    # The Gazebo topic is <robot_ns>/camera/image_raw, the ROS topic /camera/image_raw
+    # The Gazebo topic is <robot_ns>/camera/image_raw, the ROS topics /camera/image_raw[/<transport>]:
+    # image_transport names its topics from the topic before the remapping, so each one is remapped
     camera_bridge = Node(
         package='ros_gz_image',
         executable='image_bridge',
         arguments=[[robot_ns, '/camera/image_raw']],
-        remappings=[([robot_ns, '/camera/image_raw'], '/camera/image_raw')],
+        remappings=[([robot_ns, '/camera/image_raw' + t], '/camera/image_raw' + t)
+                    for t in ('', '/compressed', '/compressedDepth', '/theora', '/zstd')],
         output='screen',
         condition=IfCondition(camera),
     )
